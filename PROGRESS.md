@@ -5,7 +5,7 @@
 ## Останнє оновлення
 
 - Дата: 2026-08-27
-- Стан: **Phase 4 — Wallet / Balances завершено.**
+- Стан: **Phase 5 — Market завершено.**
 - Робоча папка: `C:\Users\DIMAS\Desktop\Programming\PythonPRO\CryptoExchange_PRO`
 
 ### Що зроблено в Phase 0:
@@ -47,9 +47,18 @@
 - Реєстрація в `main.py`
 - QA: backend `20 passed` (13 auth + 7 wallet)
 
+### Що зроблено в Phase 5:
+- `core/seed.py` — seed каталогу: 4 assets (USD, USDT, BTC, ETH) + 4 пари (BTC/USDT, ETH/USDT, BTC/USD, ETH/USD), викликається в lifespan
+- `services/market.py` — симуляція ринкових цін (детермінована за хвилину), ticker з 24h статистикою (open/high/low/change/volume), OHLC свічки
+- `routers/market.py` — `GET /pairs`, `GET /tickers`, `GET /tickers/{symbol}`, `GET /candles/{symbol}` (symbol з `/` через `{symbol:path}`)
+- `schemas/market.py` — Pair/Ticker/Candle
+- Тести: `tests/test_market.py` — 6 тестів (seed, pairs, ticker, all tickers, candles, 404)
+- Live smoke: seed + pairs проти реального Postgres (docker) — ок
+- QA: backend `26 passed` (13 auth + 7 wallet + 6 market)
+
 ## Наступний крок
 
-- ➡️ **Phase 5 — Market** (уроки 43–48): assets seed, trading pairs, market price, ticker, 24h statistics, OHLC candles
+- ➡️ **Phase 6 — Orders / Trading** (уроки 23–27, але в крипто-плані): простий market order виконання, order book, fill, P&L
 
 ## Roadmap (фази)
 
@@ -60,7 +69,7 @@
 | 2 | PostgreSQL | ✅ |
 | 3 | Authentication | ✅ |
 | 4 | Wallet / Balances | ✅ |
-| 5 | Market | ⬜ |
+| 5 | Market | ✅ |
 | 6 | Orders / Trading | ⬜ |
 | 7 | Realtime / WebSocket | ⬜ |
 
