@@ -43,6 +43,14 @@ def _price_at(pair_symbol: str, ts: datetime) -> Decimal:
     return base * (Decimal("1") + spread)
 
 
+def _live_price(pair_symbol: str, ts: datetime) -> Decimal:
+    """Smooth per-second price variation for realtime feed."""
+    base = _current_price(pair_symbol)
+    sec = int(ts.timestamp())
+    drift = math.sin(sec / 8.0) * 0.002 + math.sin(sec / 23.0) * 0.0015
+    return base * (Decimal("1") + Decimal(str(drift)))
+
+
 async def list_pairs(db: AsyncSession) -> list[TradingPair]:
     result = await db.execute(
         select(TradingPair)

@@ -5,7 +5,7 @@
 ## Останнє оновлення
 
 - Дата: 2026-08-27
-- Стан: **Phase 6 — Orders / Trading завершено.**
+- Стан: **Phase 7 — Realtime / WebSocket завершено.**
 - Робоча папка: `C:\Users\DIMAS\Desktop\Programming\PythonPRO\CryptoExchange_PRO`
 
 ### Що зроблено в Phase 0:
@@ -66,9 +66,20 @@
 - Реєстрація в `main.py`
 - QA: backend `33 passed` (13 auth + 7 wallet + 6 market + 7 orders)
 
+### Що зроблено в Phase 7:
+- `services/market.py` — додано `_live_price()` (гладка посекундна варіація ціни для realtime)
+- `services/depth.py` — синтетичний order book (bid/ask рівні, best_bid/best_ask, spread, детермінований за секунду)
+- `routers/ws.py` — WebSocket `/ws/prices?token=...&pairs=BTC/USDT,ETH/USDT`:
+  - auth через query-токен (decode_token + blacklist + user lookup)
+  - потік `{type:"price", pair, price, ts}` кожні ~50 мс
+  - періодичний снапшот `{type:"book", ...}` (order book)
+  - код 1008 при відмові авторизації
+- Тести: `tests/test_realtime.py` — 2 тести (стрімінг цін/hello, відхилення неавторизованого)
+- QA: backend `35 passed` (13 auth + 7 wallet + 6 market + 7 orders + 2 realtime)
+
 ## Наступний крок
 
-- ➡️ **Phase 7 — Realtime / WebSocket** (real-time ціни, order_book feed, notifications) + потім **P&L / Portfolio**
+- ➡️ **Phase 8 — P&L / Portfolio** (нереалізований P&L по позиціях, загальна вартість портфеля, історія закритих угод) — фінальна backend-фаза, потім фронтенд
 
 ## Roadmap (фази)
 
@@ -81,7 +92,9 @@
 | 4 | Wallet / Balances | ✅ |
 | 5 | Market | ✅ |
 | 6 | Orders / Trading | ✅ |
-| 7 | Realtime / WebSocket | ⬜ |
+| 7 | Realtime / WebSocket | ✅ |
+| 8 | P&L / Portfolio | ⬜ |
+| 9 | Frontend | ⬜ |
 
 ## Конвенції проєкту
 
