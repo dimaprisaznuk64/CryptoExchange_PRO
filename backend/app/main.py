@@ -14,7 +14,7 @@ from fastapi.responses import JSONResponse
 from app.core.config import get_settings
 from app.core.logging import setup_logging
 from app.core.cache import init_redis, close_redis
-from app.routers import health, auth
+from app.routers import health, auth, wallets
 
 settings = get_settings()
 setup_logging()
@@ -56,6 +56,7 @@ if settings.ALLOWED_HOSTS.strip() != "*":
 
 app.include_router(health.router, prefix=settings.API_V1_PREFIX)
 app.include_router(auth.router, prefix=settings.API_V1_PREFIX)
+app.include_router(wallets.router, prefix=settings.API_V1_PREFIX)
 
 
 @app.exception_handler(Exception)
