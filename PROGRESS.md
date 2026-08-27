@@ -5,7 +5,7 @@
 ## Останнє оновлення
 
 - Дата: 2026-08-27
-- Стан: **Phase 7 — Realtime / WebSocket завершено.**
+- Стан: **Phase 8 — P&L / Portfolio завершено.**
 - Робоча папка: `C:\Users\DIMAS\Desktop\Programming\PythonPRO\CryptoExchange_PRO`
 
 ### Що зроблено в Phase 0:
@@ -77,9 +77,21 @@
 - Тести: `tests/test_realtime.py` — 2 тести (стрімінг цін/hello, відхилення неавторизованого)
 - QA: backend `35 passed` (13 auth + 7 wallet + 6 market + 7 orders + 2 realtime)
 
+### Що зроблено в Phase 8:
+- Зв'язок `Wallet.asset → Asset` (relationship, ORM-level, без міграції)
+- `services/portfolio.py`:
+  - `get_portfolio` — вартість кожного активу в USD (cash 1:1; крипта через поточну ціну пари, перевага quote USD над USDT), сумарний `total_usd`
+  - нереалізований P&L `(usd_price - avg_cost) * balance`, де `avg_cost` — середньозважена ціна входу з buy-угод
+  - `get_recent_trades` — останні угоди
+- `routers/portfolio.py` — `GET /portfolio`, `GET /portfolio/trades`
+- `schemas/portfolio.py` — Portfolio/Item/RecentTrade
+- Реєстрація в `main.py`
+- Тести: `tests/test_portfolio.py` — 4 тести (empty, after buy, recent trades, auth 401)
+- QA: backend `39 passed` (13 auth + 7 wallet + 6 market + 7 orders + 2 realtime + 4 portfolio)
+
 ## Наступний крок
 
-- ➡️ **Phase 8 — P&L / Portfolio** (нереалізований P&L по позиціях, загальна вартість портфеля, історія закритих угод) — фінальна backend-фаза, потім фронтенд
+- ➡️ **Phase 9 — Frontend** (SPA: керування аккаунтом, гаманці, біржа, realtime-ціни, портфель) — окремий next-каталог/фронтенд
 
 ## Roadmap (фази)
 
@@ -93,7 +105,7 @@
 | 5 | Market | ✅ |
 | 6 | Orders / Trading | ✅ |
 | 7 | Realtime / WebSocket | ✅ |
-| 8 | P&L / Portfolio | ⬜ |
+| 8 | P&L / Portfolio | ✅ |
 | 9 | Frontend | ⬜ |
 
 ## Конвенції проєкту
