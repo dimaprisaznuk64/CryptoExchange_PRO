@@ -5,7 +5,7 @@
 ## Останнє оновлення
 
 - Дата: 2026-08-27
-- Стан: **Phase 0 завершено (уроки 1–8).**
+- Стан: **Phase 2 — PostgreSQL підключено (моделі + Alembic).**
 - Робоча папка: `C:\Users\DIMAS\Desktop\Programming\PythonPRO\CryptoExchange_PRO`
 
 ### Що зроблено в Phase 0:
@@ -18,20 +18,26 @@
 - `logging.py` — логи (stdout + RotatingFileHandler)
 - `database.py` — async engine / session / Base
 - Перший FastAPI server + `GET /api/v1/health`
-- Health перевірено: `200 {"status": "ok", ...}` (db — error, бо Postgres ще не запущено)
+
+### Що зроблено в Phase 2:
+- `docker-compose.yml` — Postgres 16 (порт 5433) + Redis 7 (порт 6380), unique до InternetShop_PRO
+- `.env` / `.env.example` / `.env.docker` оновлено під нові порти
+- Моделі: `User` (ролі user/trader/manager/admin), `Asset`, `TradingPair`, `Wallet` (spot/funding, balance/available/frozen)
+- Alembic налаштовано (async env.py)
+- Міграція `f45ed1946413` — initial schema, застосовано до Postgres
+- Health перевірено: `200 {"status":"ok", "database":"connected"}`
 
 ## Наступний крок
 
-- ➡️ **Phase 1 — Architecture** (уроки 9–14): routers/services/repositories поділ, error handling, API versioning, Swagger
-- ➡️ Потім **Phase 2 — PostgreSQL** (уроки 15–23): підключення, Alembic, моделі User/Wallet/Asset/TradingPair
+- ➡️ **Phase 3 — Authentication** (уроки 24–33): registration, password hashing, login, JWT access/refresh, rotation, logout, token blacklist, RBAC, account blocking
 
 ## Roadmap (фази)
 
 | Phase | Назва | Статус |
 |-------|-------|--------|
 | 0 | Створення проєкту | ✅ |
-| 1 | Architecture | ⬜ |
-| 2 | PostgreSQL | ⬜ |
+| 1 | Architecture | ✅ (частково: config/logging/versioning/swagger) |
+| 2 | PostgreSQL | ✅ |
 | 3 | Authentication | ⬜ |
 | 4 | Wallet / Balances | ⬜ |
 | 5 | Market | ⬜ |
