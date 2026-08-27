@@ -5,7 +5,7 @@
 ## Останнє оновлення
 
 - Дата: 2026-08-27
-- Стан: **Phase 2 — PostgreSQL підключено (моделі + Alembic).**
+- Стан: **Phase 3 — Authentication завершено.**
 - Робоча папка: `C:\Users\DIMAS\Desktop\Programming\PythonPRO\CryptoExchange_PRO`
 
 ### Що зроблено в Phase 0:
@@ -27,9 +27,19 @@
 - Міграція `f45ed1946413` — initial schema, застосовано до Postgres
 - Health перевірено: `200 {"status":"ok", "database":"connected"}`
 
+### Що зроблено в Phase 3:
+- `core/cache.py` — Redis (init/get/set/delete)
+- `core/security.py` — хешування bcrypt, JWT access/refresh, token blacklist через Redis
+- `dependencies/auth.py` — `get_current_user` + RBAC (`require_trader/manager/admin`)
+- `schemas/user.py`, `schemas/auth.py` — Pydantic схеми
+- `routers/auth.py` — register / login / refresh / logout / me
+- `main.py` — lifespan (redis init/close), підключено auth router
+- Тести: `tests/test_auth.py` — 13 тестів (register, login, blocked, me, refresh, logout/blacklist, 401/403/409)
+- QA: backend `13 passed`, hermetic (sqlite + in-memory redis mock, `asyncio_default_*_loop_scope=session`)
+
 ## Наступний крок
 
-- ➡️ **Phase 3 — Authentication** (уроки 24–33): registration, password hashing, login, JWT access/refresh, rotation, logout, token blacklist, RBAC, account blocking
+- ➡️ **Phase 4 — Wallet / Balances** (уроки 34–42): wallet architecture, balances, deposit/withdrawal, transaction ledger, atomic operations, захист від negative balance, race conditions
 
 ## Roadmap (фази)
 

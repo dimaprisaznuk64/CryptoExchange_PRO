@@ -4,6 +4,8 @@ import sys
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
@@ -11,12 +13,21 @@ from fastapi.responses import JSONResponse
 
 from app.core.config import get_settings
 from app.core.logging import setup_logging
-from app.routers import health
+from app.core.cache import init_redis, close_redis
+from app.routers import health, auth
 
 settings = get_settings()
 setup_logging()
 
 docs_enabled = settings.DEBUG
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await init_redis()
+    yield
+    await close_redis()
+
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -26,6 +37,7 @@ app = FastAPI(
     docs_url="/docs" if docs_enabled else None,
     redoc_url="/redoc" if docs_enabled else None,
     openapi_url="/openapi.json" if docs_enabled else None,
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -43,6 +55,7 @@ if settings.ALLOWED_HOSTS.strip() != "*":
     )
 
 app.include_router(health.router, prefix=settings.API_V1_PREFIX)
+app.include_router(auth.router, prefix=settings.API_V1_PREFIX)
 
 
 @app.exception_handler(Exception)
