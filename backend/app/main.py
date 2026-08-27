@@ -15,7 +15,7 @@ from app.core.config import get_settings
 from app.core.logging import setup_logging
 from app.core.cache import init_redis, close_redis
 from app.core.database import async_session
-from app.routers import health, auth, wallets, market
+from app.routers import health, auth, wallets, market, orders
 
 settings = get_settings()
 setup_logging()
@@ -62,6 +62,7 @@ app.include_router(health.router, prefix=settings.API_V1_PREFIX)
 app.include_router(auth.router, prefix=settings.API_V1_PREFIX)
 app.include_router(wallets.router, prefix=settings.API_V1_PREFIX)
 app.include_router(market.router, prefix=settings.API_V1_PREFIX)
+app.include_router(orders.router, prefix=settings.API_V1_PREFIX)
 
 
 @app.exception_handler(Exception)

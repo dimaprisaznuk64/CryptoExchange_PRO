@@ -5,7 +5,7 @@
 ## Останнє оновлення
 
 - Дата: 2026-08-27
-- Стан: **Phase 5 — Market завершено.**
+- Стан: **Phase 6 — Orders / Trading завершено.**
 - Робоча папка: `C:\Users\DIMAS\Desktop\Programming\PythonPRO\CryptoExchange_PRO`
 
 ### Що зроблено в Phase 0:
@@ -56,9 +56,19 @@
 - Live smoke: seed + pairs проти реального Postgres (docker) — ок
 - QA: backend `26 passed` (13 auth + 7 wallet + 6 market)
 
+### Що зроблено в Phase 6:
+- Моделі `Order` (side buy/sell, type market/limit, price, qty, filled_qty, avg_fill_price, status) і `Trade` (кожна угода записується для P&L)
+- Міграція `f534bdc35207` — `orders` + `trades` (застосовано)
+- `services/trading.py` — `place_market_order`: атомарне виконання (row-lock обох гаманців), buy (USDT→BTC) / sell (BTC→USDT), перевірка балансу, запис Trade + ledger
+- `routers/orders.py` — `POST /orders`, `GET /orders`, `GET /orders/trades`
+- `schemas/order.py` — PlaceMarketOrder/Order/Trade
+- Тести: `tests/test_orders.py` — 7 тестів (buy, sell, insufficient 400, bad side 422, unknown pair 404, history/trades, auth 401)
+- Реєстрація в `main.py`
+- QA: backend `33 passed` (13 auth + 7 wallet + 6 market + 7 orders)
+
 ## Наступний крок
 
-- ➡️ **Phase 6 — Orders / Trading** (уроки 23–27, але в крипто-плані): простий market order виконання, order book, fill, P&L
+- ➡️ **Phase 7 — Realtime / WebSocket** (real-time ціни, order_book feed, notifications) + потім **P&L / Portfolio**
 
 ## Roadmap (фази)
 
@@ -70,7 +80,7 @@
 | 3 | Authentication | ✅ |
 | 4 | Wallet / Balances | ✅ |
 | 5 | Market | ✅ |
-| 6 | Orders / Trading | ⬜ |
+| 6 | Orders / Trading | ✅ |
 | 7 | Realtime / WebSocket | ⬜ |
 
 ## Конвенції проєкту
