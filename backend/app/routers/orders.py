@@ -5,29 +5,42 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.dependencies.auth import get_current_user
 from app.models.user import User
-from app.models.order import OrderSide, OrderStatus
+from app.models.order import OrderSide, OrderStatus, OrderType
 from app.models.trading_pair import TradingPair
-from app.schemas.order import PlaceMarketOrderRequest, OrderResponse, TradeResponse
+from app.schemas.order import (
+    PlaceOrderRequest,
+    OrderResponse,
+    CancelOrderResponse,
+    TradeResponse,
+)
 from app.services import trading as trading_service
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
 
 @router.post("", response_model=OrderResponse, status_code=201)
-async def place_market_order(
-    data: PlaceMarketOrderRequest,
+async def place_order(
+    data: PlaceOrderRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     if data.side not in ("buy", "sell"):
         raise HTTPException(status_code=422, detail="side must be 'buy' or 'sell'")
 
-    order = await trading_service.place_market_order(
-        db, current_user.id, data.pair, OrderSide(data.side), data.qty
+    order = await trading_service.place_order(
+        db,
+        current_user.id,
+        data.pair,
+        OrderSide(data.side),
+        OrderType(data.type),
+        data.qty,
+        price=data.price,
     )
     await db.commit()
     await db.refresh(order)
-    pair = (await db.execute(select(TradingPair).where(TradingPair.id == order.pair_id))).scalar_one_or_none()
+    pair = (
+        await db.execute(select(TradingPair).where(TradingPair.id == order.pair_id))
+    ).scalar_one_or_none()
     return _to_order_response(order, pair)
 
 
@@ -35,16 +48,30 @@ async def place_market_order(
 async def my_orders(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
+    status: str | None = Query(None, description="filter by order status (open/filled/cancelled)"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    orders = await trading_service.list_orders(db, current_user.id, limit, offset)
+    orders = await trading_service.list_orders(
+        db, current_user.id, limit, offset, order_status=status
+    )
     pairs = {}
     for o in orders:
         if o.pair_id not in pairs:
             res = await db.execute(select(TradingPair).where(TradingPair.id == o.pair_id))
             pairs[o.pair_id] = res.scalar_one_or_none()
     return [_to_order_response(o, pairs.get(o.pair_id)) for o in orders]
+
+
+@router.post("/{order_id}/cancel", response_model=CancelOrderResponse)
+async def cancel_my_order(
+    order_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    order = await trading_service.cancel_order(db, current_user.id, order_id)
+    await db.commit()
+    return CancelOrderResponse(id=order.id, status=order.status.value)
 
 
 @router.get("/trades", response_model=list[TradeResponse])

@@ -4,7 +4,7 @@ from datetime import datetime, UTC
 
 import sqlalchemy as sa
 from sqlalchemy import String, Numeric, Enum, ForeignKey, DateTime
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
 
@@ -52,3 +52,5 @@ class Order(Base):
         default=lambda: datetime.now(UTC),
         onupdate=lambda: datetime.now(UTC),
     )
+
+    pair = relationship("TradingPair")

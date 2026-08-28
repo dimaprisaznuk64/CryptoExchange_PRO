@@ -120,3 +120,180 @@ async def test_order_history_and_trades(client, db_session):
 async def test_orders_require_auth(client, db_session):
     resp = await client.get("/api/v1/orders")
     assert resp.status_code == 401
+
+
+# --- Limit orders (BT C/USDT price is deterministic within [55332, 67628]) ---
+# buy limit at 1000 is far below market  -> stays open (freeze quote)
+# buy limit at 100000 is far above market -> fills immediately
+# sell limit at 100000 is far above market -> stays open (freeze base)
+# sell limit at 1000 is far below market -> fills immediately
+
+
+@pytest.mark.asyncio
+async def test_limit_buy_below_market_open_freezes_quote(client, db_session):
+    headers = await _seed(client, db_session)
+    await client.post("/api/v1/wallets/deposit", json={"asset_symbol": "USDT", "amount": 10000}, headers=headers)
+
+    resp = await client.post("/api/v1/orders", json={
+        "pair": "BTC/USDT", "side": "buy", "qty": 0.05, "type": "limit", "price": 1000,
+    }, headers=headers)
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["status"] == "open"
+    assert body["type"] == "limit"
+    assert float(body["price"]) == 1000.0
+    assert float(body["filled_qty"]) == 0.0
+
+    usdt = await _balance(client, headers, "USDT")
+    assert float(usdt["balance"]) == 10000.0          # balance untouched
+    assert float(usdt["frozen"]) == 50.0              # 0.05 * 1000 frozen
+    assert float(usdt["available"]) == 9950.0
+    assert await _balance(client, headers, "BTC") is None  # nothing received
+
+
+@pytest.mark.asyncio
+async def test_limit_buy_above_market_fills_immediately(client, db_session):
+    headers = await _seed(client, db_session)
+    await client.post("/api/v1/wallets/deposit", json={"asset_symbol": "USDT", "amount": 10000}, headers=headers)
+
+    resp = await client.post("/api/v1/orders", json={
+        "pair": "BTC/USDT", "side": "buy", "qty": 0.05, "type": "limit", "price": 100000,
+    }, headers=headers)
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["status"] == "filled"
+    assert float(body["avg_fill_price"]) == 100000.0
+
+    usdt = await _balance(client, headers, "USDT")
+    btc = await _balance(client, headers, "BTC")
+    assert float(usdt["balance"]) == 5000.0           # spent 0.05 * 100000
+    assert float(usdt["frozen"]) == 0.0
+    assert float(btc["balance"]) == 0.05
+    assert float(btc["available"]) == 0.05
+
+
+@pytest.mark.asyncio
+async def test_limit_sell_above_market_open_freezes_base(client, db_session):
+    headers = await _seed(client, db_session)
+    await client.post("/api/v1/wallets/deposit", json={"asset_symbol": "BTC", "amount": 0.1}, headers=headers)
+
+    resp = await client.post("/api/v1/orders", json={
+        "pair": "BTC/USDT", "side": "sell", "qty": 0.04, "type": "limit", "price": 100000,
+    }, headers=headers)
+    assert resp.status_code == 201
+    assert resp.json()["status"] == "open"
+
+    btc = await _balance(client, headers, "BTC")
+    assert float(btc["balance"]) == 0.1
+    assert float(btc["frozen"]) == 0.04
+    assert float(btc["available"]) == 0.06
+    usdt = await _balance(client, headers, "USDT")
+    assert usdt is None
+
+
+@pytest.mark.asyncio
+async def test_limit_sell_below_market_fills_immediately(client, db_session):
+    headers = await _seed(client, db_session)
+    await client.post("/api/v1/wallets/deposit", json={"asset_symbol": "BTC", "amount": 0.1}, headers=headers)
+
+    resp = await client.post("/api/v1/orders", json={
+        "pair": "BTC/USDT", "side": "sell", "qty": 0.04, "type": "limit", "price": 1000,
+    }, headers=headers)
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["status"] == "filled"
+    assert float(body["avg_fill_price"]) == 1000.0
+
+    btc = await _balance(client, headers, "BTC")
+    usdt = await _balance(client, headers, "USDT")
+    assert float(btc["balance"]) == 0.06
+    assert float(usdt["balance"]) == 40.0             # 0.04 * 1000
+    assert float(usdt["available"]) == 40.0
+
+
+@pytest.mark.asyncio
+async def test_cancel_open_buy_unfreezes(client, db_session):
+    headers = await _seed(client, db_session)
+    await client.post("/api/v1/wallets/deposit", json={"asset_symbol": "USDT", "amount": 10000}, headers=headers)
+    order = await client.post("/api/v1/orders", json={
+        "pair": "BTC/USDT", "side": "buy", "qty": 0.05, "type": "limit", "price": 1000,
+    }, headers=headers)
+    order_id = order.json()["id"]
+
+    resp = await client.post(f"/api/v1/orders/{order_id}/cancel", headers=headers)
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "cancelled"
+
+    usdt = await _balance(client, headers, "USDT")
+    assert float(usdt["frozen"]) == 0.0
+    assert float(usdt["available"]) == 10000.0
+
+    again = await client.post(f"/api/v1/orders/{order_id}/cancel", headers=headers)
+    assert again.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_cancel_open_sell_unfreezes(client, db_session):
+    headers = await _seed(client, db_session)
+    await client.post("/api/v1/wallets/deposit", json={"asset_symbol": "BTC", "amount": 0.1}, headers=headers)
+    order = await client.post("/api/v1/orders", json={
+        "pair": "BTC/USDT", "side": "sell", "qty": 0.04, "type": "limit", "price": 100000,
+    }, headers=headers)
+    order_id = order.json()["id"]
+
+    resp = await client.post(f"/api/v1/orders/{order_id}/cancel", headers=headers)
+    assert resp.status_code == 200
+
+    btc = await _balance(client, headers, "BTC")
+    assert float(btc["frozen"]) == 0.0
+    assert float(btc["available"]) == 0.1
+
+
+@pytest.mark.asyncio
+async def test_cancel_unknown_404(client, db_session):
+    headers = await _seed(client, db_session)
+    resp = await client.post("/api/v1/orders/no-such-order/cancel", headers=headers)
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_limit_requires_price_422(client, db_session):
+    headers = await _seed(client, db_session)
+    await client.post("/api/v1/wallets/deposit", json={"asset_symbol": "USDT", "amount": 10000}, headers=headers)
+    resp = await client.post("/api/v1/orders", json={
+        "pair": "BTC/USDT", "side": "buy", "qty": 0.05, "type": "limit",
+    }, headers=headers)
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_limit_buy_insufficient_400(client, db_session):
+    headers = await _seed(client, db_session)
+    await client.post("/api/v1/wallets/deposit", json={"asset_symbol": "USDT", "amount": 10000}, headers=headers)
+    resp = await client.post("/api/v1/orders", json={
+        "pair": "BTC/USDT", "side": "buy", "qty": 1, "type": "limit", "price": 100000,
+    }, headers=headers)
+    assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_orders_filter_by_status(client, db_session):
+    headers = await _seed(client, db_session)
+    await client.post("/api/v1/wallets/deposit", json={"asset_symbol": "USDT", "amount": 10000}, headers=headers)
+    await client.post("/api/v1/orders", json={
+        "pair": "BTC/USDT", "side": "buy", "qty": 0.02, "type": "limit", "price": 1000,
+    }, headers=headers)  # open
+    await client.post("/api/v1/orders", json={
+        "pair": "BTC/USDT", "side": "buy", "qty": 0.03, "type": "limit", "price": 100000,
+    }, headers=headers)  # filled
+
+    all_orders = await client.get("/api/v1/orders", headers=headers)
+    assert len(all_orders.json()) == 2
+
+    open_orders = await client.get("/api/v1/orders", params={"status": "open"}, headers=headers)
+    assert len(open_orders.json()) == 1
+    assert open_orders.json()[0]["status"] == "open"
+
+    filled = await client.get("/api/v1/orders", params={"status": "filled"}, headers=headers)
+    assert len(filled.json()) == 1
+    assert filled.json()[0]["status"] == "filled"
