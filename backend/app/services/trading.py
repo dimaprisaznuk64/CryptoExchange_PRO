@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, UTC
 from decimal import Decimal
 
 from fastapi import HTTPException, status
@@ -13,7 +14,7 @@ from app.models.order import Order, OrderSide, OrderType, OrderStatus
 from app.models.trade import Trade
 from app.models.transaction import Transaction, TransactionType, TransactionStatus
 from app.services import wallet as wallet_service
-from app.services.market import _current_price
+from app.services.market import _current_price, _live_price
 
 logger = logging.getLogger(__name__)
 
@@ -88,6 +89,11 @@ async def _unfreeze_limit(db, user_id, pair, base: Asset, quote: Asset, side: Or
         base_wallet.available = _to_dec(base_wallet.available) + qty
 
 
+def _fill_note(order: Order, pair: TradingPair) -> str:
+    label = order.type.value.replace("_", " ")
+    return f"{label} {order.side.value} {pair.symbol}"
+
+
 async def _execute_limit_fill(db, order: Order, pair: TradingPair) -> None:
     base: Asset = pair.base_asset
     quote: Asset = pair.quote_asset
@@ -104,8 +110,8 @@ async def _execute_limit_fill(db, order: Order, pair: TradingPair) -> None:
         quote_wallet.frozen = _to_dec(quote_wallet.frozen) - notional
         base_wallet.balance = _to_dec(base_wallet.balance) + qty
         base_wallet.available = _to_dec(base_wallet.available) + qty
-        _add_ledger(db, order.user_id, quote_wallet.id, quote.id, notional, -notional, TransactionType.trade_buy, f"Limit buy {pair.symbol}")
-        _add_ledger(db, order.user_id, base_wallet.id, base.id, qty, qty, TransactionType.trade_buy, f"Limit buy {pair.symbol}")
+        _add_ledger(db, order.user_id, quote_wallet.id, quote.id, notional, -notional, TransactionType.trade_buy, _fill_note(order, pair))
+        _add_ledger(db, order.user_id, base_wallet.id, base.id, qty, qty, TransactionType.trade_buy, _fill_note(order, pair))
     else:
         base_wallet = await wallet_service.get_or_create_wallet(db, order.user_id, base.id)
         await _lock_wallet(db, base_wallet.id)
@@ -115,8 +121,8 @@ async def _execute_limit_fill(db, order: Order, pair: TradingPair) -> None:
         base_wallet.frozen = _to_dec(base_wallet.frozen) - qty
         quote_wallet.balance = _to_dec(quote_wallet.balance) + notional
         quote_wallet.available = _to_dec(quote_wallet.available) + notional
-        _add_ledger(db, order.user_id, base_wallet.id, base.id, qty, -qty, TransactionType.trade_sell, f"Limit sell {pair.symbol}")
-        _add_ledger(db, order.user_id, quote_wallet.id, quote.id, notional, notional, TransactionType.trade_sell, f"Limit sell {pair.symbol}")
+        _add_ledger(db, order.user_id, base_wallet.id, base.id, qty, -qty, TransactionType.trade_sell, _fill_note(order, pair))
+        _add_ledger(db, order.user_id, quote_wallet.id, quote.id, notional, notional, TransactionType.trade_sell, _fill_note(order, pair))
 
     order.filled_qty = qty
     order.avg_fill_price = fill_price
@@ -142,7 +148,11 @@ async def _sweep_open_orders(db: AsyncSession, user_id: str) -> list[Order]:
             selectinload(Order.pair).selectinload(TradingPair.base_asset),
             selectinload(Order.pair).selectinload(TradingPair.quote_asset),
         )
-        .where(Order.user_id == user_id, Order.status == OrderStatus.open)
+        .where(
+            Order.user_id == user_id,
+            Order.status == OrderStatus.open,
+            Order.type == OrderType.limit,
+        )
     )
     filled: list[Order] = []
     for order in result.scalars().all():
@@ -153,6 +163,55 @@ async def _sweep_open_orders(db: AsyncSession, user_id: str) -> list[Order]:
             or (order.side == OrderSide.sell and current >= _to_dec(order.price))
         )
         if not crossed:
+            continue
+        await _execute_limit_fill(db, order, pair)
+        filled.append(order)
+    if filled:
+        await db.flush()
+    return filled
+
+
+def _conditional_triggered(order: Order, live: Decimal) -> bool:
+    """Take profit fires on a favourable move, stop loss on an adverse one."""
+    trigger = _to_dec(order.price)
+    if order.type == OrderType.take_profit:
+        if order.side == OrderSide.sell:
+            return live >= trigger
+        return live <= trigger
+    if order.type == OrderType.stop_loss:
+        if order.side == OrderSide.sell:
+            return live <= trigger
+        return live >= trigger
+    return False
+
+
+async def check_conditional_orders(
+    db: AsyncSession, user_id: str | None = None
+) -> list[Order]:
+    """Fill open take_profit/stop_loss orders triggered by the live price.
+
+    Called after each user action and periodically by the background monitor.
+    """
+    now = datetime.now(UTC)
+    query = (
+        select(Order)
+        .options(
+            selectinload(Order.pair).selectinload(TradingPair.base_asset),
+            selectinload(Order.pair).selectinload(TradingPair.quote_asset),
+        )
+        .where(
+            Order.status == OrderStatus.open,
+            Order.type.in_([OrderType.take_profit, OrderType.stop_loss]),
+        )
+    )
+    if user_id is not None:
+        query = query.where(Order.user_id == user_id)
+    result = await db.execute(query)
+    filled: list[Order] = []
+    for order in result.scalars().all():
+        pair = order.pair
+        live = _live_price(pair.symbol, now)
+        if not _conditional_triggered(order, live):
             continue
         await _execute_limit_fill(db, order, pair)
         filled.append(order)
@@ -177,16 +236,16 @@ async def place_order(
     base: Asset = pair.base_asset
     quote: Asset = pair.quote_asset
 
-    if order_type == OrderType.limit:
+    if order_type != OrderType.market:
         if price is None or Decimal(str(price)) <= 0:
-            raise HTTPException(status_code=400, detail="Limit price must be positive")
+            raise HTTPException(status_code=400, detail="Order price must be positive")
         limit_price = Decimal(str(price))
 
         order = Order(
             user_id=user_id,
             pair_id=pair.id,
             side=side,
-            type=OrderType.limit,
+            type=order_type,
             price=limit_price,
             qty=qty,
             status=OrderStatus.open,
@@ -196,6 +255,7 @@ async def place_order(
             await _freeze_limit(db, user_id, pair, base, quote, side, _to_dec(qty), limit_price)
             await db.flush()
             await _sweep_open_orders(db, user_id)
+            await check_conditional_orders(db, user_id)
         except Exception:
             await db.rollback()
             raise
@@ -203,6 +263,7 @@ async def place_order(
         try:
             order = await _place_market(db, user_id, pair, base, quote, side, qty)
             await _sweep_open_orders(db, user_id)
+            await check_conditional_orders(db, user_id)
         except Exception:
             await db.rollback()
             raise

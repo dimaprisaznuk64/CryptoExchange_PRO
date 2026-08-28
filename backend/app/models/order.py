@@ -17,6 +17,8 @@ class OrderSide(str, enum.Enum):
 class OrderType(str, enum.Enum):
     market = "market"
     limit = "limit"
+    take_profit = "take_profit"
+    stop_loss = "stop_loss"
 
 
 class OrderStatus(str, enum.Enum):

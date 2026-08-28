@@ -5,7 +5,7 @@
 ## Останнє оновлення
 
 - Дата: 2026-08-28
-- Стан: **Phase 10 — Limit orders завершено (backend + frontend).**
+- Стан: **Phase 11 — TP/SL (backend готова; frontend далі).**
 - Робоча папка: `C:\Users\DIMAS\Desktop\Programming\PythonPRO\CryptoExchange_PRO`
 
 ### Що зроблено в Phase 0:
@@ -148,6 +148,20 @@
   - insufficient → 400; sell open → freeze base (frozen 0.02, available 0)
   - sell @1000 → миттєвий філл (BTC −0.01, USDT +10); фільтри `?status=open|filled` ✓
 
+### Що зроблено в Phase 11 (стовп 1 — backend TP/SL):
+- `models/order.py` — `OrderType` розширено: `take_profit`, `stop_loss`
+- Міграція `2ffbf4af1389` — `ALTER TYPE ordertype ADD VALUE take_profit/stop_loss` (застосовано до Postgres; downgrade перебудовує enum)
+- `services/trading.py`:
+  - `_conditional_triggered(order, live)` — TP спрацьовує при сприятливому русі (sell: live ≥ price, buy: live ≤ price), SL — при несприятливому
+  - `check_conditional_orders(db, user_id=None)` — сканує відкриті TP/SL за **live-ціною** (посекундна), виповнює за тригерною ціною (той самий механізм `_execute_limit_fill`)
+  - `place_order` приймає типи take_profit/stop_loss; включено в перевірку тригерів після кожного ордера
+  - ledger-нотатки тепер відображають тип («limit buy», «take profit sell»)
+- `main.py` — фоновий асинхронний монітор `_conditional_monitor_loop()` (інтервал `CONDITIONAL_CHECK_INTERVAL_SECONDS`, default 5): кожні N сек перевіряє всі TP/SL і автовиконує перетнуті; запускається в lifespan, скасовується при shutdown
+- `config.py` — новий параметр `CONDITIONAL_CHECK_INTERVAL_SECONDS`
+- Тести: `tests/test_orders.py` +5 (TP sell open+freeze+cancel, TP sell миттєвий філл, SL sell через монітор, TP buy через монітор, price обов'язковий 422)
+- QA: backend `54 passed` (49 + 5)
+- Live-інтеграція: скрипти `test_tpsl.mjs` (9/9), `test_monitor.mjs` (9/9) — монітор самостійно виконав відкритий sell stop_loss через ~46с без дій користувача (BTC frozen → filled, USDT зараховано за тригерною ціною)
+
 ### Примітка щодо портів (2026-08-28, тимчасово)
 - Docker auto-restore підняв контейнери іншого проєкту (InternetShop_PRO), які зайняли **8000** (backend) і **3000** (frontend)
 - Тому наш стек працює на **backend `:8001`**, **frontend `:3001`**:
@@ -157,7 +171,8 @@
 
 ## Наступний крок
 
-- ➡️ **Phase 11** (ідеї): TP/SL (take-profit / stop-loss), історія угод з фільтрами, сповіщення, деплой (Vercel + Docker)
+- ➡️ **Phase 11** (в роботі): backend TP/SL готовий (11.1) → Frontend: поля TP/SL у формі ордера, список умовних ордерів з Cancel (11.2), QA + коміт (11.3)
+- Після: історія угод з фільтрами, сповіщення, деплой (Vercel + Docker)
 
 ## Roadmap (фази)
 
@@ -174,6 +189,7 @@
 | 8 | P&L / Portfolio | ✅ |
 | 9 | Frontend | ✅ |
 | 10 | Limit orders | ✅ |
+| 11 | TP/SL | 🔄 (backend ✅, frontend далі) |
 
 ## Як запустити frontend
 

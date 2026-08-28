@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import sys
 
 if sys.platform == "win32":
@@ -16,11 +17,27 @@ from app.core.logging import setup_logging
 from app.core.cache import init_redis, close_redis
 from app.core.database import async_session
 from app.routers import health, auth, wallets, market, orders, portfolio, ws
+from app.services import trading as trading_service
 
 settings = get_settings()
 setup_logging()
+logger = logging.getLogger(__name__)
 
 docs_enabled = settings.DEBUG
+
+
+async def _conditional_monitor_loop() -> None:
+    """Auto-execute take_profit/stop_loss orders when the live price crosses them."""
+    while True:
+        await asyncio.sleep(settings.CONDITIONAL_CHECK_INTERVAL_SECONDS)
+        try:
+            async with async_session() as session:
+                await trading_service.check_conditional_orders(session)
+                await session.commit()
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("Conditional order monitor error")
 
 
 @asynccontextmanager
@@ -29,7 +46,13 @@ async def lifespan(app: FastAPI):
     async with async_session() as session:
         from app.core.seed import seed_catalog
         await seed_catalog(session)
+    monitor_task = asyncio.create_task(_conditional_monitor_loop())
     yield
+    monitor_task.cancel()
+    try:
+        await monitor_task
+    except asyncio.CancelledError:
+        pass
     await close_redis()
 
 

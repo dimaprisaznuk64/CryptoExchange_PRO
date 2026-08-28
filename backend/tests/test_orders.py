@@ -1,10 +1,12 @@
 import pytest
+from decimal import Decimal
 from sqlalchemy import insert
 
 from app.models.user import User
 from app.models.asset import Asset
 from app.models.trading_pair import TradingPair
 from app.core.security import create_access_token, hash_password
+from app.services import trading as trading_service
 
 
 async def _seed(client, db_session, uid="o-user"):
@@ -297,3 +299,116 @@ async def test_orders_filter_by_status(client, db_session):
     filled = await client.get("/api/v1/orders", params={"status": "filled"}, headers=headers)
     assert len(filled.json()) == 1
     assert filled.json()[0]["status"] == "filled"
+
+
+# --- Conditional orders (take_profit / stop_loss) ---------------------------
+# BTC/USDT live price is deterministic in ~[55138, 67865]; the extremes below
+# are safely outside that range so orders either rest or fill predictably.
+
+
+@pytest.mark.asyncio
+async def test_take_profit_sell_above_market_open_freezes_base(client, db_session):
+    headers = await _seed(client, db_session)
+    await client.post("/api/v1/wallets/deposit", json={"asset_symbol": "BTC", "amount": 0.1}, headers=headers)
+
+    resp = await client.post("/api/v1/orders", json={
+        "pair": "BTC/USDT", "side": "sell", "qty": 0.04, "type": "take_profit", "price": 200000,
+    }, headers=headers)
+    assert resp.status_code == 201
+    assert resp.json()["status"] == "open"
+    assert resp.json()["type"] == "take_profit"
+
+    btc = await _balance(client, headers, "BTC")
+    assert float(btc["frozen"]) == 0.04
+    assert float(btc["available"]) == 0.06
+
+    cancel = await client.post(f"/api/v1/orders/{resp.json()['id']}/cancel", headers=headers)
+    assert cancel.status_code == 200
+    btc2 = await _balance(client, headers, "BTC")
+    assert float(btc2["frozen"]) == 0.0
+    assert float(btc2["available"]) == 0.1
+
+
+@pytest.mark.asyncio
+async def test_take_profit_sell_below_market_fills_immediately(client, db_session):
+    headers = await _seed(client, db_session)
+    await client.post("/api/v1/wallets/deposit", json={"asset_symbol": "BTC", "amount": 0.1}, headers=headers)
+
+    resp = await client.post("/api/v1/orders", json={
+        "pair": "BTC/USDT", "side": "sell", "qty": 0.04, "type": "take_profit", "price": 1000,
+    }, headers=headers)
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["status"] == "filled"
+    assert float(body["avg_fill_price"]) == 1000.0
+
+    btc = await _balance(client, headers, "BTC")
+    usdt = await _balance(client, headers, "USDT")
+    assert float(btc["balance"]) == 0.06
+    assert float(usdt["balance"]) == 40.0
+
+
+@pytest.mark.asyncio
+async def test_stop_loss_sell_rests_then_triggers_via_monitor(client, db_session, monkeypatch):
+    headers = await _seed(client, db_session)
+    await client.post("/api/v1/wallets/deposit", json={"asset_symbol": "BTC", "amount": 0.1}, headers=headers)
+
+    resp = await client.post("/api/v1/orders", json={
+        "pair": "BTC/USDT", "side": "sell", "qty": 0.04, "type": "stop_loss", "price": 50000,
+    }, headers=headers)
+    assert resp.status_code == 201
+    assert resp.json()["status"] == "open"
+    btc = await _balance(client, headers, "BTC")
+    assert float(btc["frozen"]) == 0.04
+
+    monkeypatch.setattr(
+        "app.services.trading._live_price",
+        lambda symbol, ts: Decimal("49000"),
+    )
+    await trading_service.check_conditional_orders(db_session)
+
+    filled = await client.get("/api/v1/orders", params={"status": "filled"}, headers=headers)
+    assert len(filled.json()) == 1
+    assert float(filled.json()[0]["avg_fill_price"]) == 50000.0
+
+    btc = await _balance(client, headers, "BTC")
+    usdt = await _balance(client, headers, "USDT")
+    assert float(btc["balance"]) == 0.06
+    assert float(btc["frozen"]) == 0.0
+    assert float(usdt["balance"]) == 2000.0
+
+
+@pytest.mark.asyncio
+async def test_take_profit_buy_triggers_via_monitor(client, db_session, monkeypatch):
+    headers = await _seed(client, db_session)
+    await client.post("/api/v1/wallets/deposit", json={"asset_symbol": "USDT", "amount": 10000}, headers=headers)
+
+    resp = await client.post("/api/v1/orders", json={
+        "pair": "BTC/USDT", "side": "buy", "qty": 0.04, "type": "take_profit", "price": 50000,
+    }, headers=headers)
+    assert resp.status_code == 201
+    assert resp.json()["status"] == "open"
+    usdt = await _balance(client, headers, "USDT")
+    assert float(usdt["frozen"]) == 2000.0   # 0.04 * 50000
+
+    monkeypatch.setattr(
+        "app.services.trading._live_price",
+        lambda symbol, ts: Decimal("49000"),
+    )
+    await trading_service.check_conditional_orders(db_session)
+
+    usdt = await _balance(client, headers, "USDT")
+    btc = await _balance(client, headers, "BTC")
+    assert float(usdt["frozen"]) == 0.0
+    assert float(usdt["balance"]) == 8000.0  # paid 0.04 * 50000
+    assert float(btc["balance"]) == 0.04
+
+
+@pytest.mark.asyncio
+async def test_conditional_requires_price_422(client, db_session):
+    headers = await _seed(client, db_session)
+    await client.post("/api/v1/wallets/deposit", json={"asset_symbol": "BTC", "amount": 0.1}, headers=headers)
+    resp = await client.post("/api/v1/orders", json={
+        "pair": "BTC/USDT", "side": "sell", "qty": 0.04, "type": "take_profit",
+    }, headers=headers)
+    assert resp.status_code == 422

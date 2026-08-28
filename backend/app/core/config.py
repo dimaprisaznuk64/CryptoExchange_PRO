@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     # Redis / Celery
     REDIS_URL: str = "redis://localhost:6379/0"
 
+    # Conditional orders (TP/SL) background monitor
+    CONDITIONAL_CHECK_INTERVAL_SECONDS: int = 5
+
     # CORS
     CORS_ORIGINS: str = "http://localhost:3000"
     ALLOWED_HOSTS: str = "*"
