@@ -5,7 +5,7 @@
 ## Останнє оновлення
 
 - Дата: 2026-08-28
-- Стан: **Phase 13 — 7-денна історія портфеля (backend готова; frontend далі).**
+- Стан: **Phase 13 — 7-денна історія портфеля (завершено: backend + frontend).**
 - Робоча папка: `C:\Users\DIMAS\Desktop\Programming\PythonPRO\CryptoExchange_PRO`
 
 ### Що зроблено в Phase 0:
@@ -190,7 +190,10 @@
 - Нова relationship `Transaction.asset` (модель)
 - Тести: +2 (реконструкція до-депозиту = 0, остання точка = поточна вартість ±1; auth 401)
 - QA: backend `58 passed`; live `test_history.mjs` **9/9** (13 точок, 85 точок для 7d, збіг з total_usd, 422)
-- Коміт: див. git log (Phase 13, backend)
+- Коміт: `e38c381` (backend Phase 13)
+- Frontend (дашборд): графік «Portfolio history» (SVG-лінія + площа, без залежностей), значення «Value now» + зміна − 7 днів; `PortfolioChart` компонент, `getPortfolioHistory(days)` в API
+- QA frontend: ESLint ✓, `next build` ✓, :3001/dashboard → 200; регресія live limit orders 27/27
+- Коміт frontend: див. git log (Phase 13)
 
 ### Примітка щодо портів (2026-08-28, тимчасово)
 - Docker auto-restore підняв контейнери іншого проєкту (InternetShop_PRO), які зайняли **8000** (backend) і **3000** (frontend)

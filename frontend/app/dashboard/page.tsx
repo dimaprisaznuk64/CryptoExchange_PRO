@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import { Protected } from "@/components/Protected";
 import { Card, CardHeader, Spinner } from "@/components/ui";
 import { useAuth } from "@/contexts/AuthContext";
+import { PortfolioChart } from "@/components/PortfolioChart";
 import {
   formatDateTime,
   formatNumber,
@@ -15,6 +16,7 @@ import { cn } from "@/lib/utils";
 function PortfolioPanel() {
   const { data, loading, error } = useFetch(() => api.getPortfolio(), []);
   const trades = useFetch(() => api.getRecentTrades(10), []);
+  const history = useFetch(() => api.getPortfolioHistory(7), []);
 
   if (loading) {
     return (
@@ -63,6 +65,16 @@ function PortfolioPanel() {
           </div>
         </div>
       </Card>
+
+      {history.data && history.data.length > 0 && (
+        <Card className="overflow-hidden">
+          <CardHeader
+            title="Portfolio history"
+            subtitle="Total portfolio value over the last 7 days"
+          />
+          <PortfolioChart data={history.data} />
+        </Card>
+      )}
 
       <Card>
         <CardHeader

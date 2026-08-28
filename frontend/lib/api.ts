@@ -3,6 +3,7 @@ import type {
   BalanceResponse,
   Candle,
   Order,
+  PortfolioHistoryPoint,
   PortfolioResponse,
   RecentTrade,
   Ticker,
@@ -242,6 +243,11 @@ export const api = {
 
   // portfolio
   getPortfolio: () => apiFetch<PortfolioResponse>("/api/v1/portfolio", { auth: true }),
+  getPortfolioHistory: (days = 7) =>
+    apiFetch<PortfolioHistoryPoint[]>(
+      `/api/v1/portfolio/history?days=${days}`,
+      { auth: true },
+    ),
   getRecentTrades: (limit = 20) =>
     apiFetch<RecentTrade[]>(`/api/v1/portfolio/trades?limit=${limit}`, { auth: true }),
 };

@@ -108,6 +108,11 @@ export interface PortfolioResponse {
   items: PortfolioItem[];
 }
 
+export interface PortfolioHistoryPoint {
+  time: string;
+  value: number;
+}
+
 export interface RecentTrade {
   id: string;
   pair: string;
