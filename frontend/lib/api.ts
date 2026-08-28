@@ -184,7 +184,7 @@ export const api = {
     pair: string,
     side: "buy" | "sell",
     qty: number,
-    orderType: "market" | "limit" = "market",
+    orderType: "market" | "limit" | "take_profit" | "stop_loss" = "market",
     price?: number,
   ) =>
     apiFetch<Order>("/api/v1/orders", {

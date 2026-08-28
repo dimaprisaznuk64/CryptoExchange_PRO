@@ -5,7 +5,7 @@
 ## Останнє оновлення
 
 - Дата: 2026-08-28
-- Стан: **Phase 11 — TP/SL (backend готова; frontend далі).**
+- Стан: **Phase 11 — TP/SL завершено (backend + frontend).**
 - Робоча папка: `C:\Users\DIMAS\Desktop\Programming\PythonPRO\CryptoExchange_PRO`
 
 ### Що зроблено в Phase 0:
@@ -162,6 +162,17 @@
 - QA: backend `54 passed` (49 + 5)
 - Live-інтеграція: скрипти `test_tpsl.mjs` (9/9), `test_monitor.mjs` (9/9) — монітор самостійно виконав відкритий sell stop_loss через ~46с без дій користувача (BTC frozen → filled, USDT зараховано за тригерною ціною)
 
+### Що зроблено в Phase 11 (стовп 2 — frontend TP/SL):
+- `app/trade/page.tsx`:
+  - у формі ордера блок **"Take-profit / Stop-loss"** (Add/Remove): два поля TP/SL (placeholders ≈ live ×1.05 / ×0.95)
+  - після виконання базового ордера (filled) автоматично створюються умовні ордери: TP/SL протилежної сторони на `filled_qty`; TP/SL повідомлення в успіху («Bought … + TP + SL order placed»)
+  - валідація: хоча б один із TP/SL обов'язковий, ціни > 0
+  - таблиця Orders: бейджі **TP** (green) / **SL** (red) у колонці Type; Cancel працює для всіх open (у т.ч. умовних)
+  - після place/cancel скидаються поля TP/SL
+- `lib/api.ts` — `placeOrder` type тепер включає `take_profit | stop_loss`
+- QA: `npm run lint` чистий, `npm run build` успішний (6 сторінок)
+- Live E2E (симуляція фронт-флоу): buy 0.05 BTC → TP sell @200000 (open) + SL sell @50000 (open) → frozen 0.05, available 0; rows у списку; cancel SL (frozen 0.03) → cancel TP (frozen 0) — **13/13 passed**
+
 ### Примітка щодо портів (2026-08-28, тимчасово)
 - Docker auto-restore підняв контейнери іншого проєкту (InternetShop_PRO), які зайняли **8000** (backend) і **3000** (frontend)
 - Тому наш стек працює на **backend `:8001`**, **frontend `:3001`**:
@@ -171,8 +182,7 @@
 
 ## Наступний крок
 
-- ➡️ **Phase 11** (в роботі): backend TP/SL готовий (11.1) → Frontend: поля TP/SL у формі ордера, список умовних ордерів з Cancel (11.2), QA + коміт (11.3)
-- Після: історія угод з фільтрами, сповіщення, деплой (Vercel + Docker)
+- ➡️ **Phase 12** (ідеї): історія угод з фільтрами (пара/сторона/період), сповіщення, деплой (Vercel + Docker)
 
 ## Roadmap (фази)
 
@@ -189,7 +199,7 @@
 | 8 | P&L / Portfolio | ✅ |
 | 9 | Frontend | ✅ |
 | 10 | Limit orders | ✅ |
-| 11 | TP/SL | 🔄 (backend ✅, frontend далі) |
+| 11 | TP/SL | ✅ |
 
 ## Як запустити frontend
 

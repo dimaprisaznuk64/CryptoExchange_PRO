@@ -39,6 +39,9 @@ function TradingView() {
   const [orderType, setOrderType] = useState<"market" | "limit">("market");
   const [qty, setQty] = useState("");
   const [limitPrice, setLimitPrice] = useState("");
+  const [addTpsl, setAddTpsl] = useState(false);
+  const [tpPrice, setTpPrice] = useState("");
+  const [slPrice, setSlPrice] = useState("");
   const [orderError, setOrderError] = useState<string | null>(null);
   const [orderSuccess, setOrderSuccess] = useState<string | null>(null);
   const [placing, setPlacing] = useState(false);
@@ -50,6 +53,15 @@ function TradingView() {
   const trades = useFetch(() => api.getOrderTrades(20), [ordersVersion]);
 
   const refreshOrders = useCallback(() => setOrdersVersion((v) => v + 1), []);
+
+  const orderTypeBadge = (t: string) =>
+    t === "take_profit" ? (
+      <Badge tone="green">TP</Badge>
+    ) : t === "stop_loss" ? (
+      <Badge tone="red">SL</Badge>
+    ) : (
+      <span className="text-xs capitalize text-zinc-500">{t}</span>
+    );
 
   const livePrice = realtime.prices[pair];
 
@@ -67,16 +79,45 @@ function TradingView() {
       setOrderError("Enter a valid limit price");
       return;
     }
+    const tp = tpPrice !== "" ? Number(tpPrice) : NaN;
+    const sl = slPrice !== "" ? Number(slPrice) : NaN;
+    if (addTpsl) {
+      if (Number.isNaN(tp) && Number.isNaN(sl)) {
+        setOrderError("Enter at least a take-profit or stop-loss price");
+        return;
+      }
+      if ((Number.isFinite(tp) && tp <= 0) || (Number.isFinite(sl) && sl <= 0)) {
+        setOrderError("TP/SL prices must be positive");
+        return;
+      }
+    }
     setPlacing(true);
     try {
       const order = await api.placeOrder(pair, side, amt, orderType, price);
+      const extras: string[] = [];
+      if (order.status === "filled" && Number(order.filled_qty) > 0 && addTpsl) {
+        const opposite: "buy" | "sell" = order.side === "buy" ? "sell" : "buy";
+        const q = Number(order.filled_qty);
+        if (!Number.isNaN(tp)) {
+          await api.placeOrder(pair, opposite, q, "take_profit", tp);
+          extras.push("TP");
+        }
+        if (!Number.isNaN(sl)) {
+          await api.placeOrder(pair, opposite, q, "stop_loss", sl);
+          extras.push("SL");
+        }
+      }
       setOrderSuccess(
         order.status === "open"
           ? `Limit ${side} order placed: ${order.qty} ${pair} @ ${order.price}`
-          : `${side === "buy" ? "Bought" : "Sold"} ${order.filled_qty} ${pair} @ ${order.avg_fill_price ?? "market"}`,
+          : `${side === "buy" ? "Bought" : "Sold"} ${order.filled_qty} ${pair} @ ${order.avg_fill_price ?? "market"}` +
+              (extras.length ? ` + ${extras.join(" + ")} order placed` : ""),
       );
       setQty("");
       if (orderType === "limit") setLimitPrice("");
+      setTpPrice("");
+      setSlPrice("");
+      setAddTpsl(false);
       if (user) refreshOrders();
     } catch (err) {
       setOrderError(
@@ -297,6 +338,47 @@ function TradingView() {
               />
             )}
 
+            <div className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs">
+              <span className="text-zinc-400">Take-profit / Stop-loss</span>
+              <button
+                type="button"
+                onClick={() => setAddTpsl((v) => !v)}
+                className={cn(
+                  "cursor-pointer rounded-md px-2 py-1 font-medium transition-colors",
+                  addTpsl
+                    ? "bg-indigo-600 text-white"
+                    : "text-indigo-400 hover:text-indigo-300",
+                )}
+              >
+                {addTpsl ? "Remove" : "Add"}
+              </button>
+            </div>
+
+            {addTpsl && (
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  label="Take-profit"
+                  type="number"
+                  inputMode="decimal"
+                  step="any"
+                  min="0"
+                  placeholder={livePrice ? String(Number(livePrice) * 1.05) : "0.00"}
+                  value={tpPrice}
+                  onChange={(e) => setTpPrice(e.target.value)}
+                />
+                <Input
+                  label="Stop-loss"
+                  type="number"
+                  inputMode="decimal"
+                  step="any"
+                  min="0"
+                  placeholder={livePrice ? String(Number(livePrice) * 0.95) : "0.00"}
+                  value={slPrice}
+                  onChange={(e) => setSlPrice(e.target.value)}
+                />
+              </div>
+            )}
+
             {estTotal > 0 && (
               <div className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs">
                 <span className="text-zinc-500">
@@ -376,9 +458,7 @@ function TradingView() {
                           {o.side}
                         </Badge>
                       </td>
-                      <td className="px-5 py-2">
-                        <span className="text-xs text-zinc-500">{o.type}</span>
-                      </td>
+                      <td className="px-5 py-2">{orderTypeBadge(o.type)}</td>
                       <td className="px-5 py-2 text-right font-mono text-zinc-300">
                         {o.price != null ? formatPrice(o.price) : "-"}
                       </td>
