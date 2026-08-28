@@ -373,22 +373,59 @@ async def list_orders(
     limit: int = 50,
     offset: int = 0,
     order_status: str | None = None,
+    pair_symbol: str | None = None,
+    side: str | None = None,
+    order_type: str | None = None,
+    date_from: datetime | None = None,
+    date_to: datetime | None = None,
 ) -> list[Order]:
-    query = select(Order).where(Order.user_id == user_id)
+    query = (
+        select(Order)
+        .join(TradingPair, TradingPair.id == Order.pair_id)
+        .where(Order.user_id == user_id)
+    )
     if order_status:
         query = query.where(Order.status == OrderStatus(order_status))
+    if pair_symbol:
+        query = query.where(TradingPair.symbol == pair_symbol)
+    if side:
+        query = query.where(Order.side == OrderSide(side))
+    if order_type:
+        query = query.where(Order.type == OrderType(order_type))
+    if date_from:
+        query = query.where(Order.created_at >= date_from)
+    if date_to:
+        query = query.where(Order.created_at <= date_to)
     result = await db.execute(
         query.order_by(Order.created_at.desc()).offset(offset).limit(limit)
     )
     return list(result.scalars().all())
 
 
-async def list_trades(db: AsyncSession, user_id: str, limit: int = 50, offset: int = 0) -> list[Trade]:
-    result = await db.execute(
-        select(Trade)
+async def list_trades(
+    db: AsyncSession,
+    user_id: str,
+    limit: int = 50,
+    offset: int = 0,
+    pair_symbol: str | None = None,
+    side: str | None = None,
+    date_from: datetime | None = None,
+    date_to: datetime | None = None,
+) -> list[tuple[Trade, str]]:
+    query = (
+        select(Trade, TradingPair.symbol)
+        .join(TradingPair, TradingPair.id == Trade.pair_id)
         .where(Trade.user_id == user_id)
-        .order_by(Trade.created_at.desc())
-        .offset(offset)
-        .limit(limit)
     )
-    return list(result.scalars().all())
+    if pair_symbol:
+        query = query.where(TradingPair.symbol == pair_symbol)
+    if side:
+        query = query.where(Trade.side == side)
+    if date_from:
+        query = query.where(Trade.created_at >= date_from)
+    if date_to:
+        query = query.where(Trade.created_at <= date_to)
+    result = await db.execute(
+        query.order_by(Trade.created_at.desc()).offset(offset).limit(limit)
+    )
+    return list(result.all())

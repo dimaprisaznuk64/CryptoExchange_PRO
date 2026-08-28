@@ -40,6 +40,7 @@ class OrderResponse(BaseModel):
 class TradeResponse(BaseModel):
     id: str
     order_id: str
+    pair: str
     side: str
     price: float
     qty: float

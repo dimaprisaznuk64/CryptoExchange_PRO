@@ -5,7 +5,7 @@
 ## Останнє оновлення
 
 - Дата: 2026-08-28
-- Стан: **Phase 11 — TP/SL завершено (backend + frontend).**
+- Стан: **Phase 12 — Фільтри історії (backend готова; frontend далі).**
 - Робоча папка: `C:\Users\DIMAS\Desktop\Programming\PythonPRO\CryptoExchange_PRO`
 
 ### Що зроблено в Phase 0:
@@ -172,6 +172,14 @@
 - `lib/api.ts` — `placeOrder` type тепер включає `take_profit | stop_loss`
 - QA: `npm run lint` чистий, `npm run build` успішний (6 сторінок)
 - Live E2E (симуляція фронт-флоу): buy 0.05 BTC → TP sell @200000 (open) + SL sell @50000 (open) → frozen 0.05, available 0; rows у списку; cancel SL (frozen 0.03) → cancel TP (frozen 0) — **13/13 passed**
+
+### Що зроблено в Phase 12 (стовп 1 — backend фільтри історії):
+- `GET /orders` — нові фільтри: `pair`, `side`, `type`, `status` (вже був), `from`/`to` (datetime), plus `limit`/`offset`; валідація через `Literal` → невалідне значення дає **422**
+- `GET /orders/trades` — фільтри `pair`, `side`, `from`/`to`; відповідь тепер містить **`pair`** (symbol через JOIN з TradingPair)
+- `services/trading.py` — `list_orders`/`list_trades` з опційними фільтрами (JOIN TradingPair для символу)
+- Тести: +2 (orders-фільтри: status/side/type/pair/date + 422; trades-фільтри + поле pair)
+- QA: backend `56 passed` (54 + 2)
+- Live: `test_filters.mjs` — **22/22 passed** (комбінації фільтрів, дати, 422 на невалідних значеннях)
 
 ### Примітка щодо портів (2026-08-28, тимчасово)
 - Docker auto-restore підняв контейнери іншого проєкту (InternetShop_PRO), які зайняли **8000** (backend) і **3000** (frontend)

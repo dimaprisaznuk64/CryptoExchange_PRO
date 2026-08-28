@@ -412,3 +412,72 @@ async def test_conditional_requires_price_422(client, db_session):
         "pair": "BTC/USDT", "side": "sell", "qty": 0.04, "type": "take_profit",
     }, headers=headers)
     assert resp.status_code == 422
+
+
+# --- History filters (Phase 12) ----------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_orders_history_filters(client, db_session):
+    headers = await _seed(client, db_session)
+    await client.post("/api/v1/wallets/deposit", json={"asset_symbol": "USDT", "amount": 10000}, headers=headers)
+
+    # 1 filled market buy, 1 open limit buy, 1 open limit sell
+    await client.post("/api/v1/orders", json={"pair": "BTC/USDT", "side": "buy", "qty": 0.02}, headers=headers)
+    await client.post("/api/v1/orders", json={
+        "pair": "BTC/USDT", "side": "buy", "qty": 0.01, "type": "limit", "price": 1000,
+    }, headers=headers)
+    await client.post("/api/v1/orders", json={
+        "pair": "BTC/USDT", "side": "sell", "qty": 0.005, "type": "limit", "price": 200000,
+    }, headers=headers)
+
+    async def get(params=None):
+        r = await client.get("/api/v1/orders", params=params, headers=headers)
+        assert r.status_code == 200
+        return r.json()
+
+    assert len(await get()) == 3
+    assert len(await get({"status": "open"})) == 2
+    assert len(await get({"status": "filled"})) == 1
+    assert len(await get({"side": "buy"})) == 2
+    assert len(await get({"side": "sell"})) == 1
+    assert len(await get({"type": "limit"})) == 2
+    assert len(await get({"type": "market"})) == 1
+    assert len(await get({"pair": "BTC/USDT"})) == 3
+    assert len(await get({"pair": "ETH/USDT"})) == 0
+    assert len(await get({"type": "limit", "side": "sell", "status": "open"})) == 1
+    # date-window filters
+    before = await get({"to": "2020-01-01T00:00:00"})
+    assert before == []
+    all_now = await get({"from": "2026-01-01T00:00:00"})
+    assert len(all_now) == 3
+
+    # invalid enum value -> 422
+    bad_status = await client.get("/api/v1/orders", params={"status": "nope"}, headers=headers)
+    assert bad_status.status_code == 422
+    bad_type = await client.get("/api/v1/orders", params={"type": "dummy"}, headers=headers)
+    assert bad_type.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_trades_history_filters_and_pair_field(client, db_session):
+    headers = await _seed(client, db_session)
+    await client.post("/api/v1/wallets/deposit", json={"asset_symbol": "USDT", "amount": 10000}, headers=headers)
+    await client.post("/api/v1/orders", json={"pair": "BTC/USDT", "side": "buy", "qty": 0.02}, headers=headers)
+
+    async def get(params=None):
+        r = await client.get("/api/v1/orders/trades", params=params, headers=headers)
+        assert r.status_code == 200
+        return r.json()
+
+    all_trades = await get()
+    assert len(all_trades) == 1
+    assert all_trades[0]["pair"] == "BTC/USDT"
+    assert all_trades[0]["side"] == "buy"
+    assert len(await get({"pair": "ETH/USDT"})) == 0
+    assert len(await get({"side": "buy"})) == 1
+    assert len(await get({"side": "sell"})) == 0
+    assert await get({"to": "2020-01-01T00:00:00"}) == []
+
+    bad_side = await client.get("/api/v1/orders/trades", params={"side": "hold"}, headers=headers)
+    assert bad_side.status_code == 422

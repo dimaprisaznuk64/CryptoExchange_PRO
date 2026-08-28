@@ -1,3 +1,6 @@
+from datetime import datetime
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -48,12 +51,26 @@ async def place_order(
 async def my_orders(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
-    status: str | None = Query(None, description="filter by order status (open/filled/cancelled)"),
+    status: Literal["open", "filled", "cancelled"] | None = Query(None),
+    pair: str | None = Query(None, description="filter by pair symbol, e.g. BTC/USDT"),
+    side: Literal["buy", "sell"] | None = Query(None),
+    type: Literal["market", "limit", "take_profit", "stop_loss"] | None = Query(None),
+    from_time: datetime | None = Query(None, alias="from"),
+    to: datetime | None = Query(None),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     orders = await trading_service.list_orders(
-        db, current_user.id, limit, offset, order_status=status
+        db,
+        current_user.id,
+        limit,
+        offset,
+        order_status=status,
+        pair_symbol=pair,
+        side=side,
+        order_type=type,
+        date_from=from_time,
+        date_to=to,
     )
     pairs = {}
     for o in orders:
@@ -77,21 +94,36 @@ async def cancel_my_order(
 @router.get("/trades", response_model=list[TradeResponse])
 async def my_trades(
     limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    pair: str | None = Query(None, description="filter by pair symbol, e.g. BTC/USDT"),
+    side: Literal["buy", "sell"] | None = Query(None),
+    from_time: datetime | None = Query(None, alias="from"),
+    to: datetime | None = Query(None),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    trades = await trading_service.list_trades(db, current_user.id, limit)
+    trades = await trading_service.list_trades(
+        db,
+        current_user.id,
+        limit,
+        offset,
+        pair_symbol=pair,
+        side=side,
+        date_from=from_time,
+        date_to=to,
+    )
     return [
         TradeResponse(
             id=t.id,
             order_id=t.order_id,
+            pair=pair_symbol,
             side=t.side,
             price=float(t.price),
             qty=float(t.qty),
             notional=float(t.notional),
             created_at=t.created_at,
         )
-        for t in trades
+        for t, pair_symbol in trades
     ]
 
 
