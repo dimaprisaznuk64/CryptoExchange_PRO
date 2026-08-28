@@ -113,3 +113,38 @@ async def test_transactions_history(client, db_session):
     assert len(txs) == 2
     types = {t["type"] for t in txs}
     assert types == {"deposit"}
+
+
+@pytest.mark.asyncio
+async def test_transactions_filters(client, db_session):
+    await _seed_assets(db_session)
+    headers = await _user_and_headers(db_session)
+    await client.post("/api/v1/wallets/deposit", json={
+        "asset_symbol": "USD", "amount": 1000,
+    }, headers=headers)
+    await client.post("/api/v1/wallets/deposit", json={
+        "asset_symbol": "BTC", "amount": 0.5,
+    }, headers=headers)
+    await client.post("/api/v1/wallets/withdraw", json={
+        "asset_symbol": "USD", "amount": 100,
+    }, headers=headers)
+
+    async def q(params=None):
+        r = await client.get("/api/v1/wallets/transactions", params=params, headers=headers)
+        assert r.status_code == 200
+        return r.json()
+
+    assert len(await q()) == 3
+    assert len(await q({"type": "deposit"})) == 2
+    assert len(await q({"type": "withdrawal"})) == 1
+    assert len(await q({"asset": "USD"})) == 2
+    assert len(await q({"asset": "BTC"})) == 1
+    assert len(await q({"type": "deposit", "asset": "BTC"})) == 1
+    assert await q({"to": "2020-01-01T00:00:00"}) == []
+    assert len(await q({"from": "2026-01-01T00:00:00"})) == 3
+    # each tx carries asset + note
+    first = (await q())[0]
+    assert first["asset_symbol"] in ("USD", "BTC")
+    assert first["delta"] is not None
+    # invalid enum -> 422
+    assert (await client.get("/api/v1/wallets/transactions", params={"type": "nope"}, headers=headers)).status_code == 422

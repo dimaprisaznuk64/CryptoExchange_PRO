@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 
@@ -156,12 +157,32 @@ async def get_balances(db: AsyncSession, user_id: str) -> list[dict]:
     ]
 
 
-async def get_transactions(db: AsyncSession, user_id: str, limit: int = 50, offset: int = 0) -> list[Transaction]:
-    result = await db.execute(
+async def get_transactions(
+    db: AsyncSession,
+    user_id: str,
+    limit: int = 50,
+    offset: int = 0,
+    tx_type: str | None = None,
+    status: str | None = None,
+    asset_symbol: str | None = None,
+    date_from: datetime | None = None,
+    date_to: datetime | None = None,
+) -> list[Transaction]:
+    stmt = (
         select(Transaction)
+        .join(Asset, Transaction.asset_id == Asset.id)
         .where(Transaction.user_id == user_id)
-        .order_by(Transaction.created_at.desc())
-        .offset(offset)
-        .limit(limit)
     )
+    if tx_type:
+        stmt = stmt.where(Transaction.type == TransactionType(tx_type))
+    if status:
+        stmt = stmt.where(Transaction.status == TransactionStatus(status))
+    if asset_symbol:
+        stmt = stmt.where(Asset.symbol == asset_symbol)
+    if date_from:
+        stmt = stmt.where(Transaction.created_at >= date_from)
+    if date_to:
+        stmt = stmt.where(Transaction.created_at <= date_to)
+    stmt = stmt.order_by(Transaction.created_at.desc()).offset(offset).limit(limit)
+    result = await db.execute(stmt)
     return list(result.scalars().all())

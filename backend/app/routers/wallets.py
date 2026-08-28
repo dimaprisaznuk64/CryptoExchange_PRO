@@ -1,3 +1,6 @@
+from datetime import datetime
+from typing import Literal
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,7 +9,7 @@ from app.core.database import get_db
 from app.dependencies.auth import get_current_user
 from app.models.user import User
 from app.models.asset import Asset
-from app.models.transaction import TransactionType
+from app.models.transaction import TransactionType, TransactionStatus
 from app.schemas.wallet import (
     BalanceItem,
     BalanceResponse,
@@ -32,10 +35,25 @@ async def get_balances(
 async def get_transactions(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
+    type: Literal["deposit", "withdrawal", "trade_buy", "trade_sell", "fee", "adjustment"] | None = Query(None),
+    status: Literal["pending", "completed", "failed"] | None = Query(None),
+    asset: str | None = Query(None, description="asset symbol filter, e.g. BTC"),
+    from_time: datetime | None = Query(None, alias="from"),
+    to: datetime | None = Query(None),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    txs = await wallet_service.get_transactions(db, current_user.id, limit, offset)
+    txs = await wallet_service.get_transactions(
+        db,
+        current_user.id,
+        limit,
+        offset,
+        tx_type=type,
+        status=status,
+        asset_symbol=asset,
+        date_from=from_time,
+        date_to=to,
+    )
     result = []
     symbols = {}
     for tx in txs:

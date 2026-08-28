@@ -5,7 +5,7 @@
 ## Останнє оновлення
 
 - Дата: 2026-08-28
-- Стан: **Phase 13 — 7-денна історія портфеля (завершено: backend + frontend).**
+- Стан: **Phase 14 — Транзакції (backend фільтри готова; frontend далі).**
 - Робоча папка: `C:\Users\DIMAS\Desktop\Programming\PythonPRO\CryptoExchange_PRO`
 
 ### Що зроблено в Phase 0:
@@ -194,6 +194,13 @@
 - Frontend (дашборд): графік «Portfolio history» (SVG-лінія + площа, без залежностей), значення «Value now» + зміна − 7 днів; `PortfolioChart` компонент, `getPortfolioHistory(days)` в API
 - QA frontend: ESLint ✓, `next build` ✓, :3001/dashboard → 200; регресія live limit orders 27/27
 - Коміт frontend: див. git log (Phase 13)
+
+### Що зроблено в Phase 14 (стовп 1 — backend, фільтри транзакцій):
+- `GET /wallets/transactions` — фільтри: `type` (deposit/withdrawal/trade_buy/trade_sell/fee/adjustment), `status`, `asset` (символ), `from`/`to` (datetime), + `limit`/`offset`; невалідний type/status → 422 (Literal)
+- `services/wallet.py` `get_transactions` — фільтри через JOIN Asset (символ), enum-конвертація
+- Тести: +1 (тип/актив/комбінації/дати/422) → **59 passed**
+- Live: `test_tx_filters.mjs` **13/13** (депозити/зняття/buy-fills, фільтри, дати, 422, 401)
+- Коміт: див. git log (Phase 14, backend)
 
 ### Примітка щодо портів (2026-08-28, тимчасово)
 - Docker auto-restore підняв контейнери іншого проєкту (InternetShop_PRO), які зайняли **8000** (backend) і **3000** (frontend)
