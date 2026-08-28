@@ -180,16 +180,35 @@ export const api = {
     ),
 
   // orders
-  placeOrder: (pair: string, side: "buy" | "sell", qty: number) =>
+  placeOrder: (
+    pair: string,
+    side: "buy" | "sell",
+    qty: number,
+    orderType: "market" | "limit" = "market",
+    price?: number,
+  ) =>
     apiFetch<Order>("/api/v1/orders", {
       method: "POST",
       auth: true,
-      body: { pair, side, qty },
+      body: {
+        pair,
+        side,
+        qty,
+        type: orderType,
+        ...(price !== undefined ? { price } : {}),
+      },
+    }),
+  cancelOrder: (orderId: string) =>
+    apiFetch<{ id: string; status: string }>(`/api/v1/orders/${orderId}/cancel`, {
+      method: "POST",
+      auth: true,
     }),
   getOrders: (limit = 50, offset = 0) =>
     apiFetch<Order[]>(`/api/v1/orders?limit=${limit}&offset=${offset}`, {
       auth: true,
     }),
+  getOpenOrders: (limit = 50) =>
+    apiFetch<Order[]>(`/api/v1/orders?status=open&limit=${limit}`, { auth: true }),
   getOrderTrades: (limit = 50) =>
     apiFetch<Trade[]>(`/api/v1/orders/trades?limit=${limit}`, { auth: true }),
 

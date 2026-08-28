@@ -36,10 +36,13 @@ function TradingView() {
   const realtime = useRealtimePrices([pair]);
 
   const [side, setSide] = useState<"buy" | "sell">("buy");
+  const [orderType, setOrderType] = useState<"market" | "limit">("market");
   const [qty, setQty] = useState("");
+  const [limitPrice, setLimitPrice] = useState("");
   const [orderError, setOrderError] = useState<string | null>(null);
   const [orderSuccess, setOrderSuccess] = useState<string | null>(null);
   const [placing, setPlacing] = useState(false);
+  const [cancelling, setCancelling] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"orders" | "trades">("orders");
   const [ordersVersion, setOrdersVersion] = useState(0);
 
@@ -59,13 +62,21 @@ function TradingView() {
       setOrderError("Enter a valid quantity");
       return;
     }
+    const price = orderType === "limit" ? Number(limitPrice) : undefined;
+    if (orderType === "limit" && (!Number.isFinite(price) || (price as number) <= 0)) {
+      setOrderError("Enter a valid limit price");
+      return;
+    }
     setPlacing(true);
     try {
-      const order = await api.placeOrder(pair, side, amt);
+      const order = await api.placeOrder(pair, side, amt, orderType, price);
       setOrderSuccess(
-        `${side === "buy" ? "Bought" : "Sold"} ${order.filled_qty} ${pair} @ ${order.avg_fill_price ?? "market"}`,
+        order.status === "open"
+          ? `Limit ${side} order placed: ${order.qty} ${pair} @ ${order.price}`
+          : `${side === "buy" ? "Bought" : "Sold"} ${order.filled_qty} ${pair} @ ${order.avg_fill_price ?? "market"}`,
       );
       setQty("");
+      if (orderType === "limit") setLimitPrice("");
       if (user) refreshOrders();
     } catch (err) {
       setOrderError(
@@ -75,6 +86,27 @@ function TradingView() {
       setPlacing(false);
     }
   };
+
+  const handleCancel = async (orderId: string) => {
+    setOrderError(null);
+    setOrderSuccess(null);
+    setCancelling(orderId);
+    try {
+      await api.cancelOrder(orderId);
+      refreshOrders();
+    } catch (err) {
+      setOrderError(
+        err instanceof ApiError ? err.detail : "Failed to cancel order",
+      );
+    } finally {
+      setCancelling(null);
+    }
+  };
+
+  const estTotal =
+    Number(qty) > 0
+      ? Number(qty) * (orderType === "limit" && Number(limitPrice) > 0 ? Number(limitPrice) : livePrice ?? 0)
+      : 0;
 
   return (
     <div className="space-y-6">
@@ -189,10 +221,28 @@ function TradingView() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="h-fit">
-          <CardHeader title="Place order" subtitle="Instant market execution" />
+          <CardHeader title="Place order" subtitle="Market or limit execution" />
           <form onSubmit={handleSubmit} className="space-y-4 p-5">
             {orderError && <Alert>{orderError}</Alert>}
             {orderSuccess && <Alert tone="success">{orderSuccess}</Alert>}
+
+            <div className="flex rounded-lg border border-zinc-700 p-0.5">
+              {(["market", "limit"] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setOrderType(t)}
+                  className={cn(
+                    "flex-1 cursor-pointer rounded-md py-2 text-sm font-semibold transition-colors",
+                    orderType === t
+                      ? "bg-indigo-600 text-white"
+                      : "text-zinc-400 hover:text-zinc-200",
+                  )}
+                >
+                  {t === "market" ? "Market" : "Limit"}
+                </button>
+              ))}
+            </div>
 
             <div className="flex rounded-lg border border-zinc-700 p-0.5">
               <button
@@ -233,11 +283,27 @@ function TradingView() {
               onChange={(e) => setQty(e.target.value)}
             />
 
-            {Number(qty) > 0 && livePrice && (
+            {orderType === "limit" && (
+              <Input
+                label="Limit price"
+                type="number"
+                inputMode="decimal"
+                step="any"
+                min="0"
+                required
+                placeholder={livePrice ? String(livePrice) : "0.00"}
+                value={limitPrice}
+                onChange={(e) => setLimitPrice(e.target.value)}
+              />
+            )}
+
+            {estTotal > 0 && (
               <div className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs">
-                <span className="text-zinc-500">Est. total</span>
+                <span className="text-zinc-500">
+                  Est. total ({orderType === "limit" ? "at limit" : "at market"})
+                </span>
                 <span className="font-mono font-medium text-zinc-200">
-                  {(Number(qty) * livePrice).toLocaleString("en-US", {
+                  {estTotal.toLocaleString("en-US", {
                     maximumFractionDigits: 2,
                   })}{" "}
                   USDT
@@ -252,7 +318,9 @@ function TradingView() {
               loading={placing}
               className="w-full"
             >
-              {side === "buy" ? "Buy" : "Sell"} {pair}
+              {orderType === "limit" ? "Limit" : ""} {side === "buy" ? "Buy" : "Sell"}{" "}
+              {pair}
+              {orderType === "limit" ? " @" + (limitPrice || "…") : ""}
             </Button>
           </form>
         </Card>
@@ -286,9 +354,12 @@ function TradingView() {
                   <tr className="border-b border-zinc-800 text-xs text-zinc-500">
                     <th className="px-5 py-2 font-medium">Time</th>
                     <th className="px-5 py-2 font-medium">Side</th>
+                    <th className="px-5 py-2 font-medium">Type</th>
+                    <th className="px-5 py-2 text-right font-medium">Price</th>
                     <th className="px-5 py-2 text-right font-medium">Qty</th>
-                    <th className="px-5 py-2 text-right font-medium">Avg price</th>
+                    <th className="px-5 py-2 text-right font-medium">Filled</th>
                     <th className="px-5 py-2 font-medium">Status</th>
+                    <th className="px-5 py-2" />
                   </tr>
                 </thead>
                 <tbody>
@@ -305,23 +376,49 @@ function TradingView() {
                           {o.side}
                         </Badge>
                       </td>
+                      <td className="px-5 py-2">
+                        <span className="text-xs text-zinc-500">{o.type}</span>
+                      </td>
+                      <td className="px-5 py-2 text-right font-mono text-zinc-300">
+                        {o.price != null ? formatPrice(o.price) : "-"}
+                      </td>
                       <td className="px-5 py-2 text-right font-mono text-zinc-300">
                         {o.qty}
                       </td>
-                      <td className="px-5 py-2 text-right font-mono text-zinc-300">
-                        {o.avg_fill_price != null ? formatPrice(o.avg_fill_price) : "-"}
+                      <td className="px-5 py-2 text-right font-mono text-zinc-400">
+                        {o.filled_qty}
                       </td>
                       <td className="px-5 py-2">
-                        <Badge tone={o.status === "filled" ? "blue" : "amber"}>
+                        <Badge
+                          tone={
+                            o.status === "filled"
+                              ? "blue"
+                              : o.status === "open"
+                                ? "amber"
+                                : "default"
+                          }
+                        >
                           {o.status}
                         </Badge>
+                      </td>
+                      <td className="px-5 py-2 text-right">
+                        {o.status === "open" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            loading={cancelling === o.id}
+                            onClick={() => handleCancel(o.id)}
+                          >
+                            Cancel
+                          </Button>
+                        )}
                       </td>
                     </tr>
                   ))}
                   {(orders.data ?? []).length === 0 && (
                     <tr>
                       <td
-                        colSpan={5}
+                        colSpan={8}
                         className="px-5 py-8 text-center text-sm text-zinc-500"
                       >
                         No orders yet.
@@ -334,7 +431,6 @@ function TradingView() {
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-zinc-800 text-xs text-zinc-500">
-                    <th className="px-5 py-2 font-medium">Time</th>
                     <th className="px-5 py-2 font-medium">Time</th>
                     <th className="px-5 py-2 font-medium">Side</th>
                     <th className="px-5 py-2 text-right font-medium">Price</th>
@@ -372,7 +468,7 @@ function TradingView() {
                   {(trades.data ?? []).length === 0 && (
                     <tr>
                       <td
-                        colSpan={6}
+                        colSpan={5}
                         className="px-5 py-8 text-center text-sm text-zinc-500"
                       >
                         No trades yet.

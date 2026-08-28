@@ -5,7 +5,7 @@
 ## Останнє оновлення
 
 - Дата: 2026-08-28
-- Стан: **Phase 10 — Limit orders (backend частина готова).**
+- Стан: **Phase 10 — Limit orders завершено (backend + frontend).**
 - Робоча папка: `C:\Users\DIMAS\Desktop\Programming\PythonPRO\CryptoExchange_PRO`
 
 ### Що зроблено в Phase 0:
@@ -133,6 +133,21 @@
 - Тести: `tests/test_orders.py` +10 тестів (open+freeze buy/sell, миттєвий філл buy/sell, cancel buy/sell + повторний 400 + невідомий 404, price обов'язковий 422, недостатньо коштів 400, фільтр за статусом)
 - QA: backend `49 passed` (13 auth + 7 wallet + 6 market + 17 orders + 2 realtime + 4 portfolio)
 
+### Що зроблено в Phase 10 (стовп 2 — frontend limit orders):
+- `lib/api.ts` — `placeOrder(...)` приймає `type` (market|limit) та опційну `price`; додано `cancelOrder(id)`, `getOpenOrders()` (фільтр `status=open`)
+- `app/trade/page.tsx`:
+  - форма ордера: перемикач **Market / Limit**, для limit — поле ціни (placeholder = live price), "Est. total" рахується за limit-ціною, кнопка показує `Limit Buy/Sell @ ...`
+  - таблиця Orders: нові колонки **Type**, **Price** (лімітна/виконавча ціна), **Filled**; для open-ордерів кнопка **Cancel**
+  - після limit-ордера показ повідомлення "Limit buy order placed: QTY PAIR @ PRICE"; refresh історії після place/cancel
+  - виправлено дубль заголовка "Time" у вкладці Trades
+- QA: `npm run lint` чистий, `npm run build` успішний (6 сторінок)
+- Інтеграція з живим backend (перезапущено uvicorn під новим кодом), скрипт `test_limit_orders.mjs` — **27/27 passed**:
+  - open buy @1000 → frozen 20, available 9980, balance 10000 (незмінний)
+  - cancel → розмороження, повторний cancel → 400, missing price → 422
+  - buy @100000 → миттєвий філл за лімітом (USDT −2000, BTC +0.02)
+  - insufficient → 400; sell open → freeze base (frozen 0.02, available 0)
+  - sell @1000 → миттєвий філл (BTC −0.01, USDT +10); фільтри `?status=open|filled` ✓
+
 ### Примітка щодо портів (2026-08-28, тимчасово)
 - Docker auto-restore підняв контейнери іншого проєкту (InternetShop_PRO), які зайняли **8000** (backend) і **3000** (frontend)
 - Тому наш стек працює на **backend `:8001`**, **frontend `:3001`**:
@@ -142,8 +157,7 @@
 
 ## Наступний крок
 
-- ➡️ **Phase 10** (в роботі): backend limit-ордерів готовий (10.1+10.2) → Frontend: форма Market/Limit + ціна, список відкритих ордерів з cancel (10.3), потім QA + коміт (10.4)
-- Після: TP/SL, історія з фільтрами, сповіщення, деплой (Vercel + Docker)
+- ➡️ **Phase 11** (ідеї): TP/SL (take-profit / stop-loss), історія угод з фільтрами, сповіщення, деплой (Vercel + Docker)
 
 ## Roadmap (фази)
 
@@ -159,7 +173,7 @@
 | 7 | Realtime / WebSocket | ✅ |
 | 8 | P&L / Portfolio | ✅ |
 | 9 | Frontend | ✅ |
-| 10 | Limit orders | 🔄 (backend ✅, frontend далі) |
+| 10 | Limit orders | ✅ |
 
 ## Як запустити frontend
 
