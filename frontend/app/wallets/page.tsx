@@ -26,7 +26,11 @@ function WalletPanel() {
   const [submitting, setSubmitting] = useState(false);
 
   const balances = useFetch(() => api.getBalances(), []);
-  const transactions = useFetch(() => api.getTransactions(50), []);
+  const [txFilter, setTxFilter] = useState({ type: "", asset: "", status: "" });
+  const transactions = useFetch(
+    () => api.getTransactions({ limit: 50, ...txFilter }),
+    [txFilter.type, txFilter.asset, txFilter.status],
+  );
 
   const refresh = useCallback(() => {
     balances.refetch();
@@ -115,7 +119,69 @@ function WalletPanel() {
         </Card>
 
         <Card>
-          <CardHeader title="Transactions" subtitle="Deposit / withdrawal ledger" />
+          <CardHeader
+            title="Transactions"
+            subtitle="Deposit / withdrawal / trade ledger"
+          />
+          <div className="flex flex-wrap items-center gap-3 border-b border-zinc-800 px-5 py-3">
+            <Select
+              label=""
+              className="w-36"
+              value={txFilter.asset}
+              onChange={(e) =>
+                setTxFilter((f) => ({ ...f, asset: e.target.value }))
+              }
+            >
+              <option value="">All assets</option>
+              {(balances.data?.items ?? []).map((b) => (
+                <option key={b.asset_symbol} value={b.asset_symbol}>
+                  {b.asset_symbol}
+                </option>
+              ))}
+            </Select>
+
+            <Select
+              label=""
+              className="w-40"
+              value={txFilter.type}
+              onChange={(e) =>
+                setTxFilter((f) => ({ ...f, type: e.target.value }))
+              }
+            >
+              <option value="">All types</option>
+              <option value="deposit">Deposit</option>
+              <option value="withdrawal">Withdrawal</option>
+              <option value="trade_buy">Trade buy</option>
+              <option value="trade_sell">Trade sell</option>
+              <option value="fee">Fee</option>
+              <option value="adjustment">Adjustment</option>
+            </Select>
+
+            <Select
+              label=""
+              className="w-36"
+              value={txFilter.status}
+              onChange={(e) =>
+                setTxFilter((f) => ({ ...f, status: e.target.value }))
+              }
+            >
+              <option value="">All statuses</option>
+              <option value="completed">Completed</option>
+              <option value="pending">Pending</option>
+              <option value="failed">Failed</option>
+            </Select>
+
+            {JSON.stringify(txFilter) !==
+              JSON.stringify({ type: "", asset: "", status: "" }) ? (
+              <button
+                type="button"
+                onClick={() => setTxFilter({ type: "", asset: "", status: "" })}
+                className="cursor-pointer text-xs font-medium text-indigo-400 hover:text-indigo-300"
+              >
+                Reset
+              </button>
+            ) : null}
+          </div>
           <div className="max-h-[420px] overflow-auto">
             <table className="w-full text-left text-sm">
               <thead className="sticky top-0 bg-zinc-900">

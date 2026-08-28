@@ -5,7 +5,7 @@
 ## Останнє оновлення
 
 - Дата: 2026-08-28
-- Стан: **Phase 14 — Транзакції (backend фільтри готова; frontend далі).**
+- Стан: **Phase 14 — Транзакції (завершено: backend + frontend).**
 - Робоча папка: `C:\Users\DIMAS\Desktop\Programming\PythonPRO\CryptoExchange_PRO`
 
 ### Що зроблено в Phase 0:
@@ -200,7 +200,10 @@
 - `services/wallet.py` `get_transactions` — фільтри через JOIN Asset (символ), enum-конвертація
 - Тести: +1 (тип/актив/комбінації/дати/422) → **59 passed**
 - Live: `test_tx_filters.mjs` **13/13** (депозити/зняття/buy-fills, фільтри, дати, 422, 401)
-- Коміт: див. git log (Phase 14, backend)
+- Коміт: `1f1ef19` (backend Phase 14)
+- Frontend (`/wallets`): панель фільтрів транзакцій — Asset/Type/Status + Reset; `getTransactions` приймає об'єкт фільтрів; таблиця оновлена (ledger incl. trade_buy/trade_sell/fee)
+- QA frontend: ESLint ✓, `next build` ✓, :3001/wallets → 200; live tx-фільтри 13/13; backend без помилок (лише benign bcrypt warning)
+- Коміт frontend: див. git log (Phase 14)
 
 ### Примітка щодо портів (2026-08-28, тимчасово)
 - Docker auto-restore підняв контейнери іншого проєкту (InternetShop_PRO), які зайняли **8000** (backend) і **3000** (frontend)

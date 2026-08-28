@@ -37,6 +37,16 @@ export interface TradeFilter {
   offset?: number;
 }
 
+export interface TransactionFilter {
+  type?: string;
+  status?: string;
+  asset?: string;
+  from?: string;
+  to?: string;
+  limit?: number;
+  offset?: number;
+}
+
 const buildQuery = (params: object): string => {
   const entries = Object.entries(params).filter(
     ([, v]) => v !== undefined && v !== null && v !== "",
@@ -204,9 +214,9 @@ export const api = {
       auth: true,
       body: { asset_symbol, amount },
     }),
-  getTransactions: (limit = 50, offset = 0) =>
+  getTransactions: (filter: TransactionFilter = {}) =>
     apiFetch<Transaction[]>(
-      `/api/v1/wallets/transactions?limit=${limit}&offset=${offset}`,
+      `/api/v1/wallets/transactions${buildQuery(filter)}`,
       { auth: true },
     ),
 
