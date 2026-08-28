@@ -5,7 +5,7 @@
 ## Останнє оновлення
 
 - Дата: 2026-08-28
-- Стан: **Phase 12 — Фільтри історії (завершено: backend + frontend).**
+- Стан: **Phase 13 — 7-денна історія портфеля (backend готова; frontend далі).**
 - Робоча папка: `C:\Users\DIMAS\Desktop\Programming\PythonPRO\CryptoExchange_PRO`
 
 ### Що зроблено в Phase 0:
@@ -183,6 +183,14 @@
 - Frontend (`/trade` Activity): панель фільтрів — Order: Pair/Type/Status, Trades: Pair/Side, кнопка Reset; колонка **Pair** у таблицях ордерів і угод; `api.ts` `getOrders`/`getOrderTrades` приймають об'єкти фільтрів; `Trade.pair` у типах
 - QA frontend: ESLint ✓, `next build` ✓, живість :3001 → 200, регресія live: limit 27/27, TP/SL 9/9
 - Коміти: `74aff8c` backend; frontend-коміт див. у git log (Phase 12)
+
+### Що зроблено в Phase 13 (стовп 1 — backend, історія портфеля):
+- `GET /portfolio/history?days=7` — семпли вартості портфеля (USDT) за N днів (за замовч. 12 точок/день + фінальна точка на `now`)
+- Точна «розмотка назад»: поточна рівновага − сума `delta` транзакцій (депозити/зняття/угоди), що сталися після часу семплу; ціна активів через `_price_at` (детермінований price engine), USDT/USD = 1
+- Нова relationship `Transaction.asset` (модель)
+- Тести: +2 (реконструкція до-депозиту = 0, остання точка = поточна вартість ±1; auth 401)
+- QA: backend `58 passed`; live `test_history.mjs` **9/9** (13 точок, 85 точок для 7d, збіг з total_usd, 422)
+- Коміт: див. git log (Phase 13, backend)
 
 ### Примітка щодо портів (2026-08-28, тимчасово)
 - Docker auto-restore підняв контейнери іншого проєкту (InternetShop_PRO), які зайняли **8000** (backend) і **3000** (frontend)

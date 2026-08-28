@@ -23,3 +23,8 @@ class RecentTrade(BaseModel):
     qty: float
     notional: float
     created_at: datetime
+
+
+class PortfolioHistoryPoint(BaseModel):
+    time: datetime
+    value: float

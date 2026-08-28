@@ -4,7 +4,7 @@ from datetime import datetime, UTC
 
 import sqlalchemy as sa
 from sqlalchemy import String, Numeric, Enum, ForeignKey, DateTime
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
 
@@ -45,3 +45,5 @@ class Transaction(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
+
+    asset: Mapped["Asset"] = relationship(lazy="joined")

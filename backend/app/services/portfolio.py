@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timedelta, UTC
 from decimal import Decimal
 
 from sqlalchemy import select
@@ -9,11 +10,18 @@ from app.models.wallet import Wallet, WalletType
 from app.models.asset import Asset
 from app.models.trading_pair import TradingPair
 from app.models.trade import Trade
-from app.services.market import _current_price
+from app.models.transaction import Transaction
+from app.services.market import _current_price, _price_at
 
 logger = logging.getLogger(__name__)
 
 USD_QUOTES = ("USD", "USDT")
+
+
+def _utc(dt: datetime) -> datetime:
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=UTC)
+    return dt.astimezone(UTC)
 
 
 async def _quote_cache(db: AsyncSession):
@@ -141,3 +149,79 @@ async def get_recent_trades(db: AsyncSession, user_id: str, limit: int = 20) -> 
             }
         )
     return out
+
+
+async def get_portfolio_history(
+    db: AsyncSession, user_id: str, days: int = 7, points_per_day: int = 12
+) -> list[dict]:
+    """Portfolio USD value sampled over the last `days`, reconstructed
+    exactly from current balances minus all transaction deltas happened
+    after each sample time."""
+    wallets_res = await db.execute(
+        select(Wallet)
+        .options(selectinload(Wallet.asset))
+        .where(Wallet.user_id == user_id, Wallet.type == WalletType.spot)
+    )
+    wallets = list(wallets_res.scalars().all())
+
+    tx_res = await db.execute(
+        select(Transaction)
+        .options(selectinload(Transaction.asset))
+        .where(Transaction.user_id == user_id)
+        .order_by(Transaction.created_at.desc())
+    )
+    txs = list(tx_res.scalars().all())
+
+    prices = await _quote_cache(db)
+
+    # balance[asset_id] = current balance; then we "unwrap" deltas going back in time
+    balance: dict[str, Decimal] = {}
+    asset_symbols: dict[str, str] = {}
+    for w in wallets:
+        balance[w.asset_id] = Decimal(str(w.balance))
+        asset_symbols[w.asset_id] = w.asset.symbol
+    for t in txs:
+        asset_symbols.setdefault(t.asset_id, t.asset.symbol if t.asset else "?")
+
+    now = datetime.now(UTC)
+    start = now - timedelta(days=days)
+    total_points = days * points_per_day
+    step = timedelta(days=days) / total_points
+    end = start + step * (total_points - 1)
+    if end > now:
+        end = now
+
+    def usd_value(bal: dict[str, Decimal], ts: datetime) -> float:
+        total = Decimal("0")
+        for asset_id, v in bal.items():
+            if v == 0:
+                continue
+            symbol = asset_symbols.get(asset_id, "?")
+            if symbol in USD_QUOTES:
+                px = Decimal("1")
+            else:
+                candidates = prices.get(symbol, [])
+                if not candidates:
+                    continue
+                candidates.sort(key=lambda c: c[0])
+                px = _price_at(candidates[0][1], ts)
+            total += v * px
+        return float(total)
+
+    current_balance = dict(balance)
+    out = []
+    idx = 0
+    # newest -> oldest so transactions are unwrapped as we move back in time
+    for i in range(total_points - 1, -1, -1):
+        ts = start + step * i
+        if ts > now:
+            continue
+        while idx < len(txs) and _utc(txs[idx].created_at) > ts:
+            balance[txs[idx].asset_id] -= Decimal(str(txs[idx].delta))
+            idx += 1
+        out.append({"time": ts, "value": usd_value(balance, ts)})
+
+    # final point at current time uses untouched current balances
+    out.append({"time": now, "value": usd_value(current_balance, now)})
+
+    return sorted(out, key=lambda p: p["time"])

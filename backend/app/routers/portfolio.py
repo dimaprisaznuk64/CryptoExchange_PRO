@@ -4,7 +4,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.dependencies.auth import get_current_user
 from app.models.user import User
-from app.schemas.portfolio import PortfolioResponse, PortfolioItem, RecentTrade
+from app.schemas.portfolio import (
+    PortfolioResponse,
+    PortfolioItem,
+    RecentTrade,
+    PortfolioHistoryPoint,
+)
 from app.services import portfolio as portfolio_service
 
 router = APIRouter(prefix="/portfolio", tags=["portfolio"])
@@ -30,3 +35,15 @@ async def recent_trades(
 ):
     trades = await portfolio_service.get_recent_trades(db, current_user.id, limit)
     return [RecentTrade(**t) for t in trades]
+
+
+@router.get("/history", response_model=list[PortfolioHistoryPoint])
+async def portfolio_history(
+    days: int = Query(7, ge=1, le=30),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    points = await portfolio_service.get_portfolio_history(
+        db, current_user.id, days=days
+    )
+    return [PortfolioHistoryPoint(**p) for p in points]

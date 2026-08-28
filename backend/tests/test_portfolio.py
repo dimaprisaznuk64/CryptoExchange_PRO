@@ -82,3 +82,28 @@ async def test_recent_trades(client, db_session):
 async def test_portfolio_requires_auth(client, db_session):
     resp = await client.get("/api/v1/portfolio")
     assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_portfolio_history_reconstructs_balances(client, db_session):
+    headers = await _seed(client, db_session)
+    await client.post("/api/v1/wallets/deposit", json={"asset_symbol": "USDT", "amount": 10000}, headers=headers)
+    await client.post("/api/v1/orders", json={"pair": "BTC/USDT", "side": "buy", "qty": 0.05}, headers=headers)
+
+    resp = await client.get("/api/v1/portfolio/history", params={"days": 1}, headers=headers)
+    assert resp.status_code == 200
+    hist = resp.json()
+    assert len(hist) == 13  # 1 day * 12 points/day + current-time point
+    # before the deposit happened portfolio was empty
+    assert hist[0]["value"] == 0
+    # latest (now) sample equals current total portfolio value
+    cur = (await client.get("/api/v1/portfolio", headers=headers)).json()["total_usd"]
+    assert hist[-1]["value"] > 0
+    assert abs(hist[-1]["value"] - cur) < 1
+    assert hist[0]["time"] < hist[-1]["time"]
+
+
+@pytest.mark.asyncio
+async def test_portfolio_history_requires_auth(client, db_session):
+    resp = await client.get("/api/v1/portfolio/history")
+    assert resp.status_code == 401
