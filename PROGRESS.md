@@ -5,7 +5,7 @@
 ## Останнє оновлення
 
 - Дата: 2026-08-28
-- Стан: **Phase 12 — Фільтри історії (backend готова; frontend далі).**
+- Стан: **Phase 12 — Фільтри історії (завершено: backend + frontend).**
 - Робоча папка: `C:\Users\DIMAS\Desktop\Programming\PythonPRO\CryptoExchange_PRO`
 
 ### Що зроблено в Phase 0:
@@ -180,6 +180,9 @@
 - Тести: +2 (orders-фільтри: status/side/type/pair/date + 422; trades-фільтри + поле pair)
 - QA: backend `56 passed` (54 + 2)
 - Live: `test_filters.mjs` — **22/22 passed** (комбінації фільтрів, дати, 422 на невалідних значеннях)
+- Frontend (`/trade` Activity): панель фільтрів — Order: Pair/Type/Status, Trades: Pair/Side, кнопка Reset; колонка **Pair** у таблицях ордерів і угод; `api.ts` `getOrders`/`getOrderTrades` приймають об'єкти фільтрів; `Trade.pair` у типах
+- QA frontend: ESLint ✓, `next build` ✓, живість :3001 → 200, регресія live: limit 27/27, TP/SL 9/9
+- Коміти: `74aff8c` backend; frontend-коміт див. у git log (Phase 12)
 
 ### Примітка щодо портів (2026-08-28, тимчасово)
 - Docker auto-restore підняв контейнери іншого проєкту (InternetShop_PRO), які зайняли **8000** (backend) і **3000** (frontend)

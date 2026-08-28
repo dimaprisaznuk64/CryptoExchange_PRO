@@ -16,6 +16,36 @@ import type {
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+export interface OrderFilter {
+  status?: string;
+  side?: string;
+  type?: string;
+  pair?: string;
+  from?: string;
+  to?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface TradeFilter {
+  side?: string;
+  pair?: string;
+  from?: string;
+  to?: string;
+  limit?: number;
+  offset?: number;
+}
+
+const buildQuery = (params: object): string => {
+  const entries = Object.entries(params).filter(
+    ([, v]) => v !== undefined && v !== null && v !== "",
+  );
+  if (entries.length === 0) return "";
+  return `?${new URLSearchParams(
+    entries.map(([k, v]) => [k, String(v)]),
+  ).toString()}`;
+};
+
 const TOKEN_KEY = "cx_access_token";
 const REFRESH_KEY = "cx_refresh_token";
 
@@ -203,14 +233,12 @@ export const api = {
       method: "POST",
       auth: true,
     }),
-  getOrders: (limit = 50, offset = 0) =>
-    apiFetch<Order[]>(`/api/v1/orders?limit=${limit}&offset=${offset}`, {
-      auth: true,
-    }),
+  getOrders: (filter: OrderFilter = {}) =>
+    apiFetch<Order[]>(`/api/v1/orders${buildQuery(filter)}`, { auth: true }),
   getOpenOrders: (limit = 50) =>
     apiFetch<Order[]>(`/api/v1/orders?status=open&limit=${limit}`, { auth: true }),
-  getOrderTrades: (limit = 50) =>
-    apiFetch<Trade[]>(`/api/v1/orders/trades?limit=${limit}`, { auth: true }),
+  getOrderTrades: (filter: TradeFilter = {}) =>
+    apiFetch<Trade[]>(`/api/v1/orders/trades${buildQuery(filter)}`, { auth: true }),
 
   // portfolio
   getPortfolio: () => apiFetch<PortfolioResponse>("/api/v1/portfolio", { auth: true }),

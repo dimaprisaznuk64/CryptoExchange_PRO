@@ -48,9 +48,21 @@ function TradingView() {
   const [cancelling, setCancelling] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"orders" | "trades">("orders");
   const [ordersVersion, setOrdersVersion] = useState(0);
+  const [orderFilter, setOrderFilter] = useState({
+    pair: "",
+    type: "",
+    status: "",
+  });
+  const [tradeFilter, setTradeFilter] = useState({ pair: "", side: "" });
 
-  const orders = useFetch(() => api.getOrders(20), [ordersVersion]);
-  const trades = useFetch(() => api.getOrderTrades(20), [ordersVersion]);
+  const orders = useFetch(
+    () => api.getOrders({ limit: 20, ...orderFilter }),
+    [ordersVersion, orderFilter.pair, orderFilter.type, orderFilter.status],
+  );
+  const trades = useFetch(
+    () => api.getOrderTrades({ limit: 20, ...tradeFilter }),
+    [ordersVersion, tradeFilter.pair, tradeFilter.side],
+  );
 
   const refreshOrders = useCallback(() => setOrdersVersion((v) => v + 1), []);
 
@@ -429,12 +441,92 @@ function TradingView() {
               </div>
             }
           />
+          <div className="flex flex-wrap items-center gap-3 border-b border-zinc-800 px-5 py-3">
+            <Select
+              value={activeTab === "orders" ? orderFilter.pair : tradeFilter.pair}
+              onChange={(e) => {
+                const pair = e.target.value;
+                if (activeTab === "orders") setOrderFilter((f) => ({ ...f, pair }));
+                else setTradeFilter((f) => ({ ...f, pair }));
+              }}
+              className="w-36"
+            >
+              <option value="">All pairs</option>
+              {(pairs ?? []).map((p) => (
+                <option key={p.symbol} value={p.symbol}>
+                  {p.symbol}
+                </option>
+              ))}
+            </Select>
+
+            {activeTab === "orders" ? (
+              <>
+                <Select
+                  value={orderFilter.type}
+                  onChange={(e) =>
+                    setOrderFilter((f) => ({ ...f, type: e.target.value }))
+                  }
+                  className="w-32"
+                >
+                  <option value="">All types</option>
+                  <option value="market">Market</option>
+                  <option value="limit">Limit</option>
+                  <option value="take_profit">Take-profit</option>
+                  <option value="stop_loss">Stop-loss</option>
+                </Select>
+                <Select
+                  value={orderFilter.status}
+                  onChange={(e) =>
+                    setOrderFilter((f) => ({ ...f, status: e.target.value }))
+                  }
+                  className="w-32"
+                >
+                  <option value="">All statuses</option>
+                  <option value="open">Open</option>
+                  <option value="filled">Filled</option>
+                  <option value="cancelled">Cancelled</option>
+                </Select>
+              </>
+            ) : (
+              <Select
+                value={tradeFilter.side}
+                onChange={(e) =>
+                  setTradeFilter((f) => ({ ...f, side: e.target.value }))
+                }
+                className="w-32"
+              >
+                <option value="">All sides</option>
+                <option value="buy">Buy</option>
+                <option value="sell">Sell</option>
+              </Select>
+            )}
+
+            {(activeTab === "orders"
+              ? JSON.stringify(orderFilter)
+              : JSON.stringify(tradeFilter)) !==
+              (activeTab === "orders"
+                ? JSON.stringify({ pair: "", type: "", status: "" })
+                : JSON.stringify({ pair: "", side: "" })) ? (
+              <button
+                type="button"
+                onClick={() => {
+                  if (activeTab === "orders")
+                    setOrderFilter({ pair: "", type: "", status: "" });
+                  else setTradeFilter({ pair: "", side: "" });
+                }}
+                className="cursor-pointer text-xs font-medium text-indigo-400 hover:text-indigo-300"
+              >
+                Reset
+              </button>
+            ) : null}
+          </div>
           <div className="overflow-x-auto">
             {activeTab === "orders" ? (
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-zinc-800 text-xs text-zinc-500">
                     <th className="px-5 py-2 font-medium">Time</th>
+                    <th className="px-5 py-2 font-medium">Pair</th>
                     <th className="px-5 py-2 font-medium">Side</th>
                     <th className="px-5 py-2 font-medium">Type</th>
                     <th className="px-5 py-2 text-right font-medium">Price</th>
@@ -452,6 +544,9 @@ function TradingView() {
                     >
                       <td className="px-5 py-2 text-xs text-zinc-500">
                         {formatDateTime(o.created_at)}
+                      </td>
+                      <td className="px-5 py-2 text-xs text-zinc-400">
+                        {o.pair}
                       </td>
                       <td className="px-5 py-2">
                         <Badge tone={o.side === "buy" ? "green" : "red"}>
@@ -512,6 +607,7 @@ function TradingView() {
                 <thead>
                   <tr className="border-b border-zinc-800 text-xs text-zinc-500">
                     <th className="px-5 py-2 font-medium">Time</th>
+                    <th className="px-5 py-2 font-medium">Pair</th>
                     <th className="px-5 py-2 font-medium">Side</th>
                     <th className="px-5 py-2 text-right font-medium">Price</th>
                     <th className="px-5 py-2 text-right font-medium">Qty</th>
@@ -526,6 +622,9 @@ function TradingView() {
                     >
                       <td className="px-5 py-2 text-xs text-zinc-500">
                         {formatDateTime(t.created_at)}
+                      </td>
+                      <td className="px-5 py-2 text-xs text-zinc-400">
+                        {t.pair}
                       </td>
                       <td className="px-5 py-2">
                         <Badge tone={t.side === "buy" ? "green" : "red"}>
@@ -548,7 +647,7 @@ function TradingView() {
                   {(trades.data ?? []).length === 0 && (
                     <tr>
                       <td
-                        colSpan={5}
+                        colSpan={6}
                         className="px-5 py-8 text-center text-sm text-zinc-500"
                       >
                         No trades yet.

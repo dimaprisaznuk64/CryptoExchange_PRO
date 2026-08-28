@@ -65,6 +65,7 @@ export interface Order {
 export interface Trade {
   id: string;
   order_id: string;
+  pair: string;
   side: "buy" | "sell";
   price: number;
   qty: number;
