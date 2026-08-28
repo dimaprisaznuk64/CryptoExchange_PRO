@@ -5,7 +5,7 @@
 ## Останнє оновлення
 
 - Дата: 2026-08-28
-- Стан: **Phase 14 — Транзакції (завершено: backend + frontend).**
+- Стан: **Phase 15 = офіц. PHASE 8 (Redis) — завершено.**
 - Робоча папка: `C:\Users\DIMAS\Desktop\Programming\PythonPRO\CryptoExchange_PRO`
 
 ### Що зроблено в Phase 0:
@@ -204,6 +204,14 @@
 - Frontend (`/wallets`): панель фільтрів транзакцій — Asset/Type/Status + Reset; `getTransactions` приймає об'єкт фільтрів; таблиця оновлена (ledger incl. trade_buy/trade_sell/fee)
 - QA frontend: ESLint ✓, `next build` ✓, :3001/wallets → 200; live tx-фільтри 13/13; backend без помилок (лише benign bcrypt warning)
 - Коміт frontend: див. git log (Phase 14)
+
+### Що зроблено в Phase 15 (офіц. PHASE 8 — Redis; інфраструктура була в scaffold, додано реальне використання):
+- Раніше: `app/core/cache.py` (клієнт + graceful fallback) ініціалізувався в lifespan, але **ніде не використовувався**
+- Тепер: кешування в Redis ринкових даних — `market:tickers` та `market:ticker:{symbol}` (TTL 30s через `cache_get`/`cache_set`); при недоступному Redis — автоматичний fallback на обчислення
+- `/health` тепер повертає статус **`redis`: connected/disabled/error** (+ping)
+- Тести: +3 (ticker реально пишеться в кеш-мок; health-поля; health-report) → **62 passed**
+- Live (реальний Redis `cryptoexchange_pro-redis-1` на :6380): `/health` → `"redis":"connected"`, ключі `market:tickers`/`market:ticker:BTC/USDT` заповнені (TTL 29s), регресія 80/80 (limit/TP-SL/filters/history/tx)
+- Коміт: див. git log (Phase 15)
 
 ### Примітка щодо портів (2026-08-28, тимчасово)
 - Docker auto-restore підняв контейнери іншого проєкту (InternetShop_PRO), які зайняли **8000** (backend) і **3000** (frontend)

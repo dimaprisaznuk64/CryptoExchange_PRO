@@ -47,7 +47,7 @@ async def get_all_tickers(db: AsyncSession = Depends(get_db)):
 async def get_ticker(symbol: str, db: AsyncSession = Depends(get_db)):
     pair = await _get_pair(db, symbol)
     base, quote = symbol.split("/")
-    return market_service.get_ticker(symbol, base, quote)
+    return await market_service.get_ticker_cached(symbol, base, quote)
 
 
 @router.get("/candles/{symbol:path}", response_model=list[CandleResponse])

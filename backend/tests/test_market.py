@@ -65,3 +65,21 @@ async def test_unknown_pair_404(client, db_session):
     await seed_catalog(db_session)
     resp = await client.get("/api/v1/market/tickers/DOGE/BTC")
     assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_ticker_uses_redis_cache(client, db_session):
+    await seed_catalog(db_session)
+    import app.core.cache as cache_module
+    await cache_module.redis_client.flushdb()
+
+    resp = await client.get("/api/v1/market/tickers/BTC/USDT")
+    assert resp.status_code == 200
+
+    cached = await cache_module.redis_client.get("market:ticker:BTC/USDT")
+    assert cached is not None and "BTC/USDT" in cached
+
+    all_resp = await client.get("/api/v1/market/tickers")
+    assert all_resp.status_code == 200
+    cached_all = await cache_module.redis_client.get("market:tickers")
+    assert cached_all is not None

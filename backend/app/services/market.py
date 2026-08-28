@@ -10,8 +10,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.trading_pair import TradingPair
 from app.models.asset import Asset
+from app.core.cache import cache_get, cache_set
 
 logger = logging.getLogger(__name__)
+
+# TTL for Redis-cached market data (fall back to in-memory compute when Redis is down)
+TICKERS_CACHE_TTL = 30
+PAIRS_CACHE_TTL = 60
 
 # Deterministic base prices (simulated market_data feed)
 BASE_PRICES = {
@@ -89,14 +94,31 @@ def get_ticker(pair_symbol: str, base: Decimal, quote: Decimal) -> dict:
     }
 
 
+async def get_ticker_cached(pair_symbol: str, base: str, quote: str) -> dict:
+    """Ticker with Redis cache (graceful fallback when Redis is down)."""
+    cached = await cache_get(f"market:ticker:{pair_symbol}")
+    if cached is not None:
+        return cached
+    ticker = get_ticker(pair_symbol, base, quote)
+    await cache_set(f"market:ticker:{pair_symbol}", ticker, TICKERS_CACHE_TTL)
+    return ticker
+
+
 async def get_all_tickers(db: AsyncSession) -> list[dict]:
+    cached = await cache_get("market:tickers")
+    if cached is not None:
+        return cached
+
     symbols = await _pair_symbols(db)
     result = []
     for s in symbols:
         base, quote = s.split("/")
         pair = await db.execute(select(TradingPair).where(TradingPair.symbol == s))
         pair_obj = pair.scalar_one_or_none()
-        result.append(get_ticker(s, base, quote))
+        if pair_obj is not None:
+            result.append(get_ticker(s, base, quote))
+
+    await cache_set("market:tickers", result, TICKERS_CACHE_TTL)
     return result
 
 
