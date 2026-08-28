@@ -4,8 +4,8 @@
 
 ## Останнє оновлення
 
-- Дата: 2026-08-27
-- Стан: **Phase 8 — P&L / Portfolio завершено.**
+- Дата: 2026-08-28
+- Стан: **Phase 9 — Frontend завершено.**
 - Робоча папка: `C:\Users\DIMAS\Desktop\Programming\PythonPRO\CryptoExchange_PRO`
 
 ### Що зроблено в Phase 0:
@@ -89,9 +89,28 @@
 - Тести: `tests/test_portfolio.py` — 4 тести (empty, after buy, recent trades, auth 401)
 - QA: backend `39 passed` (13 auth + 7 wallet + 6 market + 7 orders + 2 realtime + 4 portfolio)
 
+### Що зроблено в Phase 9:
+- Scaffold: Next.js 16.3 (Turbopack, App Router, TypeScript, Tailwind v4), у `frontend/`
+- `lib/types.ts` — TS-типи, що відповідають усім backend-схемам (auth/market/order/wallet/portfolio/ws)
+- `lib/api.ts` — API-клієнт: Bearer-токени з localStorage, авто-refresh (silent) по 401, 204-обробка
+- `lib/format.ts` — форматування чисел/цін/USD/відсотків/дати
+- `contexts/AuthContext.tsx` — провайдер: login/register/logout/me, bootstrap-відновлення сесії
+- `components/` — Navbar (desktop + mobile), Protected-екран, Card/Button/Input/Select/Badge/Alert/Spinner
+- Сторінки:
+  - `/` — landing: hero + топ-4 пари + таблиця ринку з живими цінами (WS)
+  - `/login`, `/register` — форми авторизації
+  - `/dashboard` — портфель: total value, P&L, активи, останні угоди
+  - `/trade` — торгівля: OHLC-графік (SVG, без залежностей), стакан, ордер (market buy/sell), історія orders/trades, вибір пари та інтервалу
+  - `/wallets` — баланси, deposit/withdraw, лог транзакцій
+- `hooks/useRealtime.ts` — WebSocket `/ws/prices`: стрімінг цін (~50ms) + снапшоти стакана, авто-reconnect
+- `.env.local` / `.env.example` — `NEXT_PUBLIC_API_URL` / `NEXT_PUBLIC_WS_URL`
+- QA: `npm run lint` чистий, `npm run build` успішний (6 сторінок, статичний prerender), smoke 200 на всіх роутах
+- Інтеграцію з живим backend перевірити після `docker compose up` + `uvicorn`
+
 ## Наступний крок
 
-- ➡️ **Phase 9 — Frontend** (SPA: керування аккаунтом, гаманці, біржа, realtime-ціни, портфель) — окремий next-каталог/фронтенд
+- ➡️ **Інтеграційний тест** (фронтенд ↔ живий backend): запустити Postgres/Redis (docker), backend (uvicorn), перевірити register → login → deposit → trade → portfolio через UI
+- ➡️ **Phase 10** (ідеї): ордери limit/TP-SL, історія угод з фільтрами, сповіщення, деплой (Vercel + Docker)
 
 ## Roadmap (фази)
 
@@ -106,7 +125,24 @@
 | 6 | Orders / Trading | ✅ |
 | 7 | Realtime / WebSocket | ✅ |
 | 8 | P&L / Portfolio | ✅ |
-| 9 | Frontend | ⬜ |
+| 9 | Frontend | ✅ |
+
+## Як запустити frontend
+
+```bash
+# термінал 1 — інфраструктура
+docker compose up -d
+
+# термінал 2 — backend (http://localhost:8000)
+cd backend
+.venv\Scripts\activate
+uvicorn app.main:app --reload --port 8000
+
+# термінал 3 — frontend (http://localhost:3000)
+cd frontend
+npm install
+npm run dev
+```
 
 ## Конвенції проєкту
 
