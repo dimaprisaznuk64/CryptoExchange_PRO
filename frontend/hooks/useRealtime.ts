@@ -27,6 +27,7 @@ export function useRealtimePrices(pairs: string[]) {
 
   useEffect(() => {
     if (pairs.length === 0) return;
+    if (!tokenStore.getAccess()) return;
 
     const url = getWsUrl(pairs);
     let ws: WebSocket | null = null;
@@ -91,7 +92,7 @@ export function useRealtimePrices(pairs: string[]) {
       ws?.close();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pairsKey, reconnect]);
+  }, [pairsKey, reconnect, hasToken]);
 
   return { ...state, hasToken };
 }

@@ -107,9 +107,28 @@
 - QA: `npm run lint` чистий, `npm run build` успішний (6 сторінок, статичний prerender), smoke 200 на всіх роутах
 - Інтеграцію з живим backend перевірити після `docker compose up` + `uvicorn`
 
+### Що зроблено в Phase 9 (венеджмент):
+- **Інтеграційний тест frontend ↔ живий backend** — пройдено покроково:
+  - `GET /health` → ok, `database: connected`; каталог: 4 пари засіяні
+  - CORS для `http://localhost:3001` ✓ (preflight 200, allow-origin)
+  - Auth flow: register 201, me 200, logout 204, login 200, дублікат 409, невірний пароль 401
+  - Wallet: deposit 200 ×2, balances коректні, овер-вивід → 400, ledger 2 записи
+  - Portfolio: total = 15000 USD, items (USD/USDT)
+  - Orders: buy 201 (0.02 BTC @ 57760), sell 201, історія, overbuy → 400
+  - P&L: після buy/sell BTC unrealized +67.78 USD (avg cost)
+  - WebSocket: hello + 10 цін/с + стакан (10 рівнів, best_bid), no-auth → close 1008 ✓
+- **UX-фікс**: `hooks/useRealtime.ts` — незалогінені користувачі більше не підключають WS (раніше → безкінечний reconnect після 1008)
+- QA: `npm run lint` чистий, `npm run build` 6 сторінок ✓
+
+### Примітка щодо портів (2026-08-28, тимчасово)
+- Docker auto-restore підняв контейнери іншого проєкту (InternetShop_PRO), які зайняли **8000** (backend) і **3000** (frontend)
+- Тому наш стек працює на **backend `:8001`**, **frontend `:3001`**:
+  - `backend/.env` → `CORS_ORIGINS=http://localhost:3000,http://localhost:3001`
+  - `frontend/.env.local` → `NEXT_PUBLIC_API_URL=http://localhost:8001`
+- Обидва файли в `.gitignore`. Коли InternetShop зупинено — повернути стандартні порти 8000/3000
+
 ## Наступний крок
 
-- ➡️ **Інтеграційний тест** (фронтенд ↔ живий backend): запустити Postgres/Redis (docker), backend (uvicorn), перевірити register → login → deposit → trade → portfolio через UI
 - ➡️ **Phase 10** (ідеї): ордери limit/TP-SL, історія угод з фільтрами, сповіщення, деплой (Vercel + Docker)
 
 ## Roadmap (фази)
