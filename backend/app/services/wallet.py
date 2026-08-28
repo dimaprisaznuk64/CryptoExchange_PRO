@@ -1,10 +1,10 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta, UTC
 from decimal import Decimal
 from typing import Optional
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.asset import Asset
@@ -186,3 +186,20 @@ async def get_transactions(
     stmt = stmt.order_by(Transaction.created_at.desc()).offset(offset).limit(limit)
     result = await db.execute(stmt)
     return list(result.scalars().all())
+
+
+async def purge_stale_transactions(
+    db: AsyncSession, days: int = 7
+) -> int:
+    """Soft-cleanup: delete pending/failed simulated transactions older than `days`.
+    Used by the daily Celery cleanup task; returns the number removed."""
+    cutoff = datetime.now(UTC) - timedelta(days=days)
+    result = await db.execute(
+        delete(Transaction).where(
+            Transaction.status.in_(
+                [TransactionStatus.pending, TransactionStatus.failed]
+            ),
+            Transaction.created_at < cutoff,
+        )
+    )
+    return result.rowcount or 0

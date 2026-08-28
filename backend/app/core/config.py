@@ -27,6 +27,9 @@ class Settings(BaseSettings):
 
     # Redis / Celery
     REDIS_URL: str = "redis://localhost:6379/0"
+    CELERY_BROKER_URL: str = "redis://localhost:6379/1"
+    CELERY_RESULT_BACKEND: str = "redis://localhost:6379/1"
+    CELERY_TASK_ALWAYS_EAGER: bool = False
 
     # Conditional orders (TP/SL) background monitor
     CONDITIONAL_CHECK_INTERVAL_SECONDS: int = 5

@@ -5,7 +5,7 @@
 ## Останнє оновлення
 
 - Дата: 2026-08-28
-- Стан: **Phase 15 = офіц. PHASE 8 (Redis) — завершено.**
+- Стан: **Phase 16 = офіц. PHASE 9 (Celery) — завершено.**
 - Робоча папка: `C:\Users\DIMAS\Desktop\Programming\PythonPRO\CryptoExchange_PRO`
 
 ### Що зроблено в Phase 0:
@@ -211,7 +211,17 @@
 - `/health` тепер повертає статус **`redis`: connected/disabled/error** (+ping)
 - Тести: +3 (ticker реально пишеться в кеш-мок; health-поля; health-report) → **62 passed**
 - Live (реальний Redis `cryptoexchange_pro-redis-1` на :6380): `/health` → `"redis":"connected"`, ключі `market:tickers`/`market:ticker:BTC/USDT` заповнені (TTL 29s), регресія 80/80 (limit/TP-SL/filters/history/tx)
-- Коміт: див. git log (Phase 15)
+- Коміт: `03f4a05` (Phase 15)
+
+### Що зроблено в Phase 16 (офіц. PHASE 9 — Celery):
+- `app/core/celery_app.py` — Celery з broker/backend Redis (db `/1`), JSON, beat_schedule
+- `app/tasks/__init__.py` — таски: `refresh_market_stats` (beat 60s, прогрів Redis-кешу), `cleanup_stale_transactions` (beat щодня), `run_conditional_orders` (НЕ auto-sched — щоб не задвоювати з in-process монітором TP/SL)
+- Кожна таска створює свій async-engine (dispose після) — обхід Windows-обмеження asyncio.run + asyncpg loop affinity
+- `app/services/wallet.py` — `purge_stale_transactions(days)` (видалення pending/failed старше N днів)
+- Конфіг: `CELERY_BROKER_URL`/`CELERY_RESULT_BACKEND`/`CELERY_TASK_ALWAYS_EAGER`; `.env` → 6380/1
+- Тести: +2 (config/beat/реєстрація тасок; purge видаляє лише старі) → **64 passed**
+- Live: eager-виконання всіх 3 тасок (refresh {'pairs':4}, cleanup {'removed':0}, cond {'executed':0}); **celery worker запустився**: `Connected to redis://localhost:6380/1` → `celery@Dimas ready`
+- Коміт: див. git log (Phase 16)
 
 ### Примітка щодо портів (2026-08-28, тимчасово)
 - Docker auto-restore підняв контейнери іншого проєкту (InternetShop_PRO), які зайняли **8000** (backend) і **3000** (frontend)
