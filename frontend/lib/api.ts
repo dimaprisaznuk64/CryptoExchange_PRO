@@ -19,7 +19,7 @@ import type {
 } from "@/lib/types";
 
 export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
 
 export interface OrderFilter {
   status?: string;
@@ -302,7 +302,7 @@ export const api = {
 };
 
 export const getWsUrl = (pairs: string[]): string => {
-  const base = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:8000";
+  const base = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:8001";
   const token = tokenStore.getAccess() ?? "";
   const params = new URLSearchParams({ token, pairs: pairs.join(",") });
   return `${base}/ws/prices?${params.toString()}`;

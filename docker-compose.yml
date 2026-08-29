@@ -1,3 +1,22 @@
+# Local full-stack run: Postgres + Redis + Backend API (+ Celery worker/beat).
+#
+# Usage (from repo root):
+#   cp backend/.env.example backend/.env   # or set env vars
+#   docker compose up --build
+#
+# The API is exposed on ${BACKEND_PORT:-8001}.
+
+x-backend-env: &backend-env
+  DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-cryptoexchange}
+  REDIS_URL: redis://redis:6379/0
+  CELERY_BROKER_URL: redis://redis:6379/1
+  CELERY_RESULT_BACKEND: redis://redis:6379/1
+  SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+  DEBUG: ${DEBUG:-true}
+  CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:3001,http://localhost:8001}
+  ALLOWED_HOSTS: ${ALLOWED_HOSTS:-*}
+  API_V1_PREFIX: /api/v1
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -32,6 +51,47 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      <<: *backend-env
+    ports:
+      - "${BACKEND_PORT:-8001}:8001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - backend-net
+
+  worker:
+    build: ./backend
+    restart: unless-stopped
+    command: celery -A app.tasks worker --loglevel=info
+    environment:
+      <<: *backend-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - backend-net
+
+  beat:
+    build: ./backend
+    restart: unless-stopped
+    command: celery -A app.tasks beat --loglevel=info
+    environment:
+      <<: *backend-env
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - backend-net
 
 networks:
   backend-net:

@@ -5,7 +5,7 @@
 ## Останнє оновлення
 
 - Дата: 2026-08-29
-- Стан: **Phase 23 (Сповіщення користувача) — завершено.**
+- Стан: **Phase 24 (Деплой: Docker backend + Vercel frontend) — конфіги + документація готові.**
 - Робоча папка: `C:\Users\DIMAS\Desktop\Programming\PythonPRO\CryptoExchange_PRO`
 
 ### Що зроблено в Phase 0:
@@ -223,6 +223,17 @@
 - Live: eager-виконання всіх 3 тасок (refresh {'pairs':4}, cleanup {'removed':0}, cond {'executed':0}); **celery worker запустився**: `Connected to redis://localhost:6380/1` → `celery@Dimas ready`
 - Коміт: див. git log (Phase 16)
 
+### Що зроблено в Phase 24 (Деплой: Docker backend + Vercel frontend):
+- **Backend (Docker)**:
+  - `backend/Dockerfile` (python:3.13-slim, requirements, `alembic upgrade head && uvicorn --port 8001`) + `backend/.dockerignore`
+  - `docker-compose.yml` розширено: сервіси `backend`, `worker`, `beat` (Celery) поверх postgres+redis; env через anchor `x-backend-env` (хости = імена сервісів)
+  - `backend/.env.example` — шаблон env-змінних
+- **Frontend (Vercel)**: у `lib/api.ts` дефолтні `NEXT_PUBLIC_API_URL/WS_URL` приведено до `:8001`; на Vercel задаються через env (Root Directory = `frontend`)
+- `docs/DEPLOYMENT.md` — детальна інструкція: збірка/push образу, запуск на VPS, env-таблиця, міграції (включно з необхідністю застосувати `3a9f2c77d1b4` + `f0a1b2c3d4e5`), Vercel-налаштування, перевірка після деплою
+- `scripts/build-backend.sh` — хелпер збірки/push образу
+- README оновлено (розділи «Запуск» і «Деплой»); frontend lint green
+- Коміт: див. git log (Phase 24). Деплой сам не запускався (нема креда / Docker вимкнений) — конфіги + документація готові.
+
 ### Що зроблено в Phase 23 (Сповіщення користувача):
 - **Backend**:
   - Модель `Notification` (id, user_id FK, kind, title, body, is_read, created_at) + Alembic міграція `f0a1b2c3d4e5_add_notifications` (на live-Postgres застосувати через Docker)
@@ -295,7 +306,7 @@
 
 ## Наступний крок
 
-- ➡️ Кандидати на Phase 24+: адмін-кабінет, деплой (Vercel + Docker)
+- ➡️ Кандидати на Phase 25+: адмін-кабінет (великий, частинами), фактичний запуск деплою
 - ➡️ Майбутнє (ideas): сповіщення, деплой (Vercel + Docker)
 
 ## Roadmap (фази)
@@ -326,6 +337,7 @@
 | 21 | 24h-статистика ринку (/market/stats) | ✅ (додано) |
 | 22 | Звіт за обсягом (/portfolio/volume) | ✅ (додано) |
 | 23 | Сповіщення користувача (/notifications + WS) | ✅ (додано) |
+| 24 | Деплой: Docker backend + Vercel frontend | ✅ (конфіги + docs) |
 
 ## Як запустити frontend
 

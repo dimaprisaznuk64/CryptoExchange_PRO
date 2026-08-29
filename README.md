@@ -41,7 +41,21 @@
 
 ## Стек
 
-Python 3.12+, FastAPI, SQLAlchemy (async), PostgreSQL, Redis, Celery, JWT, React + TS, Pytest, Docker.
+Python 3.13, FastAPI, SQLAlchemy (async), PostgreSQL, Redis, Celery, JWT, React + Next.js + TS, Pytest, Docker.
+
+## Запуск (локально)
+
+- **Backend** (без Docker, для тестів): `cd backend && python -m pytest -q`
+  (SQLite + in-memory Redis mock, Docker не потрібен).
+- **Весь стек через Docker**: `docker compose up --build`
+  — Postgres + Redis + backend API (`:8001`) + Celery worker/beat.
+- **Frontend**: `cd frontend && npm install && npm run dev` — читає
+  `NEXT_PUBLIC_API_URL` / `NEXT_PUBLIC_WS_URL` (за замовчуванням `localhost:8001`).
+
+## Деплой
+
+Backend — **Docker** (VPS), Frontend — **Vercel**. Детальна інструкція:
+[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Стан проєкту
 
