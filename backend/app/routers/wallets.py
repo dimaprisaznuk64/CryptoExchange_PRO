@@ -23,7 +23,11 @@ from app.services import wallet as wallet_service
 router = APIRouter(prefix="/wallets", tags=["wallets"])
 
 
-@router.get("/balances", response_model=BalanceResponse)
+@router.get(
+    "/balances",
+    response_model=BalanceResponse,
+    dependencies=[Depends(rate_limit_user("wallets_balances", limit=60, window=60))],
+)
 async def get_balances(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -32,7 +36,11 @@ async def get_balances(
     return BalanceResponse(items=[BalanceItem(**i) for i in items])
 
 
-@router.get("/transactions", response_model=list[TransactionResponse])
+@router.get(
+    "/transactions",
+    response_model=list[TransactionResponse],
+    dependencies=[Depends(rate_limit_user("wallets_transactions", limit=60, window=60))],
+)
 async def get_transactions(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),

@@ -5,7 +5,7 @@
 ## Останнє оновлення
 
 - Дата: 2026-08-29
-- Стан: **Phase 18 (Security: account lockout + rate-limit на мутації) — завершено.**
+- Стан: **Phase 19 (Security: rate-limit на read-ендпоінти) — завершено.**
 - Робоча папка: `C:\Users\DIMAS\Desktop\Programming\PythonPRO\CryptoExchange_PRO`
 
 ### Що зроблено в Phase 0:
@@ -223,6 +223,13 @@
 - Live: eager-виконання всіх 3 тасок (refresh {'pairs':4}, cleanup {'removed':0}, cond {'executed':0}); **celery worker запустився**: `Connected to redis://localhost:6380/1` → `celery@Dimas ready`
 - Коміт: див. git log (Phase 16)
 
+### Що зроблено в Phase 19 (Security — rate-limit на read-ендпоінти):
+- Публічні (per-IP): `/market/pairs`, `/market/tickers`, `/market/tickers/{symbol}`, `/market/candles` (rate_limit 60–120/60s)
+- Автентифіковані (per-user через `rate_limit_user`): `/portfolio`, `/portfolio/trades`, `/portfolio/history`; `/wallets/balances`, `/wallets/transactions`; `/orders`, `/orders/trades` (30–60/60s)
+- Тести: +2 (per-IP 429 на market, per-user 429 на portfolio) → **73 passed**
+- Коміт: див. git log (Phase 19)
+- Станом на цей коміт покриті rate-limit: всі **write** і всі **read** ендпоінти (market/wallets/orders/portfolio/auth). Security-фази завершено.
+
 ### Що зроблено в Phase 18 (Security harden — account lockout + rate-limit на мутації):
 - `app/core/ratelimit.py` — account lockout: `record_failed_login(email)` (лічильник на акаунт `auth:failed:<email>`, на порозі `FAILED_LOGIN_THRESHOLD=5` ставить `auth:lock:<email>` TTL 15хв), `is_account_locked(email)` (повертає залишок секунд через `ttl`), `reset_failed_logins(email)` (очистка успішним логіном); виняток `AccountLocked` (423 + `Retry-After`)
 - `rate_limit_user(scope, limit, window)` — rate-limit **на автентифікованого користувача** (ключі `user.id` + IP), через `get_current_user`
@@ -252,7 +259,7 @@
 
 ## Наступний крок
 
-- ➡️ Кандидати на Phase 19+: адмін-кабінет, 24h-статистика ринку, звіт за обсягом, переказ між гаманцями, rate-limit для read-ендпоінтів (market/portfolio/lists)
+- ➡️ Кандидати на Phase 20+: адмін-кабінет, 24h-статистика ринку, звіт за обсягом, переказ між гаманцями (Security покрито повністю)
 - ➡️ Майбутнє (ideas): сповіщення, деплой (Vercel + Docker)
 
 ## Roadmap (фази)
@@ -278,6 +285,7 @@
 | 16 | Celery (фонова черга) | ✅ (додано) |
 | 17 | Security (rate limit, audit, headers) | ✅ (додано) |
 | 18 | Security harden (lockout, per-user rate limit) | ✅ (додано) |
+| 19 | Security: rate-limit на read-ендпоінти | ✅ (додано) |
 
 ## Як запустити frontend
 

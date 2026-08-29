@@ -131,3 +131,34 @@ async def test_per_user_rate_limit_on_place_order(client, db_session):
 
     resp = await client.post("/api/v1/orders", json=payload, headers=headers)
     assert resp.status_code == 429
+
+
+@pytest.mark.asyncio
+async def test_per_ip_rate_limit_on_market_read(client, db_session):
+    from app.core.seed import seed_catalog
+
+    await seed_catalog(db_session)
+
+    limit = 60
+    for _ in range(limit):
+        resp = await client.get("/api/v1/market/candles/BTC/USDT?interval=5&limit=10")
+        assert resp.status_code == 200
+    resp = await client.get("/api/v1/market/candles/BTC/USDT?interval=5&limit=10")
+    assert resp.status_code == 429
+    assert "Retry-After" in resp.headers
+
+
+@pytest.mark.asyncio
+async def test_per_user_rate_limit_on_portfolio_read(client, db_session):
+    from app.core.security import create_access_token
+
+    await _create_user(db_session, "u-rl-port", "rlport@test.com", "rlportuser")
+    token = create_access_token("u-rl-port")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    limit = 60
+    for _ in range(limit):
+        resp = await client.get("/api/v1/portfolio", headers=headers)
+        assert resp.status_code == 200
+    resp = await client.get("/api/v1/portfolio", headers=headers)
+    assert resp.status_code == 429

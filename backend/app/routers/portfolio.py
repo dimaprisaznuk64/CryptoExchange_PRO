@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.ratelimit import rate_limit_user
 from app.dependencies.auth import get_current_user
 from app.models.user import User
 from app.schemas.portfolio import (
@@ -15,7 +16,11 @@ from app.services import portfolio as portfolio_service
 router = APIRouter(prefix="/portfolio", tags=["portfolio"])
 
 
-@router.get("", response_model=PortfolioResponse)
+@router.get(
+    "",
+    response_model=PortfolioResponse,
+    dependencies=[Depends(rate_limit_user("portfolio", limit=60, window=60))],
+)
 async def my_portfolio(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -27,7 +32,11 @@ async def my_portfolio(
     )
 
 
-@router.get("/trades", response_model=list[RecentTrade])
+@router.get(
+    "/trades",
+    response_model=list[RecentTrade],
+    dependencies=[Depends(rate_limit_user("portfolio_trades", limit=60, window=60))],
+)
 async def recent_trades(
     limit: int = Query(20, ge=1, le=100),
     current_user: User = Depends(get_current_user),
@@ -37,7 +46,11 @@ async def recent_trades(
     return [RecentTrade(**t) for t in trades]
 
 
-@router.get("/history", response_model=list[PortfolioHistoryPoint])
+@router.get(
+    "/history",
+    response_model=list[PortfolioHistoryPoint],
+    dependencies=[Depends(rate_limit_user("portfolio_history", limit=30, window=60))],
+)
 async def portfolio_history(
     days: int = Query(7, ge=1, le=30),
     current_user: User = Depends(get_current_user),

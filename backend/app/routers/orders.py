@@ -53,7 +53,11 @@ async def place_order(
     return _to_order_response(order, pair)
 
 
-@router.get("", response_model=list[OrderResponse])
+@router.get(
+    "",
+    response_model=list[OrderResponse],
+    dependencies=[Depends(rate_limit_user("orders_list", limit=60, window=60))],
+)
 async def my_orders(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
@@ -101,7 +105,11 @@ async def cancel_my_order(
     return CancelOrderResponse(id=order.id, status=order.status.value)
 
 
-@router.get("/trades", response_model=list[TradeResponse])
+@router.get(
+    "/trades",
+    response_model=list[TradeResponse],
+    dependencies=[Depends(rate_limit_user("orders_trades", limit=60, window=60))],
+)
 async def my_trades(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),

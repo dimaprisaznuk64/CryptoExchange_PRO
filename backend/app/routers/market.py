@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.ratelimit import rate_limit
 from app.models.trading_pair import TradingPair
 from app.schemas.market import PairResponse, TickerResponse, CandleResponse
 from app.services import market as market_service
@@ -13,7 +14,11 @@ from app.services import market as market_service
 router = APIRouter(prefix="/market", tags=["market"])
 
 
-@router.get("/pairs", response_model=list[PairResponse])
+@router.get(
+    "/pairs",
+    response_model=list[PairResponse],
+    dependencies=[Depends(rate_limit("market_pairs", limit=120, window=60))],
+)
 async def list_pairs(db: AsyncSession = Depends(get_db)):
     pairs = await market_service.list_pairs(db)
     return [
@@ -38,19 +43,31 @@ async def _get_pair(db: AsyncSession, symbol: str) -> TradingPair:
     return pair
 
 
-@router.get("/tickers", response_model=list[TickerResponse])
+@router.get(
+    "/tickers",
+    response_model=list[TickerResponse],
+    dependencies=[Depends(rate_limit("market_tickers", limit=120, window=60))],
+)
 async def get_all_tickers(db: AsyncSession = Depends(get_db)):
     return await market_service.get_all_tickers(db)
 
 
-@router.get("/tickers/{symbol:path}", response_model=TickerResponse)
+@router.get(
+    "/tickers/{symbol:path}",
+    response_model=TickerResponse,
+    dependencies=[Depends(rate_limit("market_ticker", limit=120, window=60))],
+)
 async def get_ticker(symbol: str, db: AsyncSession = Depends(get_db)):
     pair = await _get_pair(db, symbol)
     base, quote = symbol.split("/")
     return await market_service.get_ticker_cached(symbol, base, quote)
 
 
-@router.get("/candles/{symbol:path}", response_model=list[CandleResponse])
+@router.get(
+    "/candles/{symbol:path}",
+    response_model=list[CandleResponse],
+    dependencies=[Depends(rate_limit("market_candles", limit=60, window=60))],
+)
 async def get_candles(
     symbol: str,
     interval: int = Query(5, ge=1, le=1440, description="minutes"),
