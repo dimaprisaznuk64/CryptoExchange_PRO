@@ -178,3 +178,21 @@ export type ServerMessage =
   | BookMessage
   | { type: "error"; detail: string }
   | { type: string; [key: string]: unknown };
+
+export interface VolumePairReport {
+  pair: string;
+  buy_notional: number;
+  sell_notional: number;
+  volume_notional: number;
+  buy_qty: number;
+  sell_qty: number;
+  trades: number;
+}
+
+export interface VolumeReport {
+  days: number;
+  total_notional: number;
+  total_qty: number;
+  total_trades: number;
+  pairs: VolumePairReport[];
+}

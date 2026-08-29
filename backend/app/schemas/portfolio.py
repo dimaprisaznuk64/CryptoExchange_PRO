@@ -28,3 +28,21 @@ class RecentTrade(BaseModel):
 class PortfolioHistoryPoint(BaseModel):
     time: datetime
     value: float
+
+
+class VolumePairReport(BaseModel):
+    pair: str
+    buy_notional: float
+    sell_notional: float
+    volume_notional: float
+    buy_qty: float
+    sell_qty: float
+    trades: int
+
+
+class VolumeReport(BaseModel):
+    days: int
+    total_notional: float
+    total_qty: float
+    total_trades: int
+    pairs: list[VolumePairReport]

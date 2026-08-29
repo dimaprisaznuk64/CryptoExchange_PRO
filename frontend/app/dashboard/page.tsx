@@ -6,6 +6,7 @@ import { Protected } from "@/components/Protected";
 import { Card, CardHeader, Spinner } from "@/components/ui";
 import { useAuth } from "@/contexts/AuthContext";
 import { PortfolioChart } from "@/components/PortfolioChart";
+import { VolumeReportPanel } from "@/components/VolumeReportPanel";
 import {
   formatDateTime,
   formatNumber,
@@ -210,6 +211,8 @@ function PortfolioPanel() {
           </table>
         </div>
       </Card>
+
+      <VolumeReportPanel />
     </div>
   );
 }

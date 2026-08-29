@@ -5,7 +5,7 @@
 ## Останнє оновлення
 
 - Дата: 2026-08-29
-- Стан: **Phase 21 (24h-статистика ринку) — завершено.**
+- Стан: **Phase 22 (Звіт за обсягом) — завершено.**
 - Робоча папка: `C:\Users\DIMAS\Desktop\Programming\PythonPRO\CryptoExchange_PRO`
 
 ### Що зроблено в Phase 0:
@@ -223,6 +223,13 @@
 - Live: eager-виконання всіх 3 тасок (refresh {'pairs':4}, cleanup {'removed':0}, cond {'executed':0}); **celery worker запустився**: `Connected to redis://localhost:6380/1` → `celery@Dimas ready`
 - Коміт: див. git log (Phase 16)
 
+### Що зроблено в Phase 22 (Звіт за обсягом):
+- `portfolio.get_volume_report(db, user_id, days)` — GROUP BY-агрегація тредів користувача за період по парах (buy/sell notional, qty, count) + загальні підсумки (total_notional/qty/trades)
+- `GET /api/v1/portfolio/volume?days=N` (1–90, дефолт 7) → `VolumeReport` (per-user rate_limit 30/60s, 401 без авторизації)
+- Frontend: `VolumeReportPanel` на `/dashboard` з перемикачем 7/30/90d та таблицею volume по парах; `api.getVolumeReport`, типи `VolumeReport`/`VolumePairReport`
+- Тести: +3 (данi звіту, порожній звіт, 401) → **84 passed**; frontend lint+build green
+- Коміт: див. git log (Phase 22)
+
 ### Що зроблено в Phase 21 (24h-статистика ринку):
 - `app/services/market.py` — `get_stats_24h(pair)` + `get_stats_24h_cached(...)`: OHLC, change %, volume (quote і base), count тредів; Redis-кеш `market:stats24:{symbol}` TTL 30s (graceful fallback)
 - `GET /api/v1/market/stats/{symbol}` → `MarketStatsResponse` (public, per-IP rate_limit 120/60s, 404 для невідомої пари)
@@ -277,7 +284,7 @@
 
 ## Наступний крок
 
-- ➡️ Кандидати на Phase 22+: адмін-кабінет, сповіщення користувача, звіт за обсягом, деплой (Vercel + Docker)
+- ➡️ Кандидати на Phase 23+: адмін-кабінет, сповіщення користувача, деплой (Vercel + Docker)
 - ➡️ Майбутнє (ideas): сповіщення, деплой (Vercel + Docker)
 
 ## Roadmap (фази)
@@ -306,6 +313,7 @@
 | 19 | Security: rate-limit на read-ендпоінти | ✅ (додано) |
 | 20 | Переказ між гаманцями (spot↔funding) | ✅ (додано) |
 | 21 | 24h-статистика ринку (/market/stats) | ✅ (додано) |
+| 22 | Звіт за обсягом (/portfolio/volume) | ✅ (додано) |
 
 ## Як запустити frontend
 

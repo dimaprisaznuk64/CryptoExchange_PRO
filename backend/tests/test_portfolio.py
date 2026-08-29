@@ -107,3 +107,43 @@ async def test_portfolio_history_reconstructs_balances(client, db_session):
 async def test_portfolio_history_requires_auth(client, db_session):
     resp = await client.get("/api/v1/portfolio/history")
     assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_volume_report(client, db_session):
+    headers = await _seed(client, db_session)
+    await client.post("/api/v1/wallets/deposit", json={"asset_symbol": "USDT", "amount": 10000}, headers=headers)
+    await client.post("/api/v1/orders", json={"pair": "BTC/USDT", "side": "buy", "qty": 0.05}, headers=headers)
+    await client.post("/api/v1/orders", json={"pair": "BTC/USDT", "side": "sell", "qty": 0.02}, headers=headers)
+
+    resp = await client.get("/api/v1/portfolio/volume", params={"days": 7}, headers=headers)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["days"] == 7
+    assert body["total_trades"] == 2
+    assert body["total_notional"] > 0
+    assert len(body["pairs"]) == 1
+    pair = body["pairs"][0]
+    assert pair["pair"] == "BTC/USDT"
+    assert pair["buy_notional"] > 0
+    assert pair["sell_notional"] > 0
+    assert pair["trades"] == 2
+    assert abs(pair["volume_notional"] - (pair["buy_notional"] + pair["sell_notional"])) < 1e-6
+    assert abs(body["total_notional"] - pair["volume_notional"]) < 1e-6
+
+
+@pytest.mark.asyncio
+async def test_volume_report_empty(client, db_session):
+    headers = await _seed(client, db_session)
+    resp = await client.get("/api/v1/portfolio/volume", headers=headers)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total_notional"] == 0
+    assert body["total_trades"] == 0
+    assert body["pairs"] == []
+
+
+@pytest.mark.asyncio
+async def test_volume_report_requires_auth(client, db_session):
+    resp = await client.get("/api/v1/portfolio/volume")
+    assert resp.status_code == 401

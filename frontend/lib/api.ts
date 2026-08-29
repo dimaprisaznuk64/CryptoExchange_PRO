@@ -13,6 +13,7 @@ import type {
   TradingPair,
   Transaction,
   User,
+  VolumeReport,
 } from "@/lib/types";
 
 export const API_URL =
@@ -274,6 +275,10 @@ export const api = {
     ),
   getRecentTrades: (limit = 20) =>
     apiFetch<RecentTrade[]>(`/api/v1/portfolio/trades?limit=${limit}`, { auth: true }),
+  getVolumeReport: (days = 7) =>
+    apiFetch<VolumeReport>(`/api/v1/portfolio/volume?days=${days}`, {
+      auth: true,
+    }),
 };
 
 export const getWsUrl = (pairs: string[]): string => {

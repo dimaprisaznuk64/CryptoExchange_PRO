@@ -2,7 +2,7 @@ import logging
 from datetime import datetime, timedelta, UTC
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -149,6 +149,76 @@ async def get_recent_trades(db: AsyncSession, user_id: str, limit: int = 20) -> 
             }
         )
     return out
+
+
+async def get_volume_report(
+    db: AsyncSession, user_id: str, days: int = 7
+) -> dict:
+    """Aggregate the user's traded volume (notional / qty) per pair over the
+    last `days` (both buy and sell sides counted as volume)."""
+    cutoff = datetime.now(UTC) - timedelta(days=days)
+    result = await db.execute(
+        select(
+            TradingPair.symbol,
+            Trade.side,
+            func.coalesce(func.sum(Trade.qty), 0),
+            func.coalesce(func.sum(Trade.notional), 0),
+            func.count(Trade.id),
+        )
+        .join(TradingPair, TradingPair.id == Trade.pair_id)
+        .where(Trade.user_id == user_id, Trade.created_at >= cutoff)
+        .group_by(TradingPair.symbol, Trade.side)
+        .order_by(TradingPair.symbol)
+    )
+    rows = result.all()
+
+    pairs: dict[str, dict] = {}
+    total_notional = Decimal("0")
+    total_qty = Decimal("0")
+    total_trades = 0
+
+    for symbol, side, qty, notional, trades in rows:
+        pair = pairs.setdefault(
+            symbol,
+            {
+                "pair": symbol,
+                "buy_notional": Decimal("0"),
+                "sell_notional": Decimal("0"),
+                "buy_qty": Decimal("0"),
+                "sell_qty": Decimal("0"),
+                "trades": 0,
+            },
+        )
+        key_notional = f"{side}_notional"
+        key_qty = f"{side}_qty"
+        pair[key_notional] += Decimal(str(notional))
+        pair[key_qty] += Decimal(str(qty))
+        pair["trades"] += trades
+        total_notional += Decimal(str(notional))
+        total_qty += Decimal(str(qty))
+        total_trades += trades
+
+    pair_list = [
+        {
+            "pair": p["pair"],
+            "buy_notional": float(p["buy_notional"]),
+            "sell_notional": float(p["sell_notional"]),
+            "volume_notional": float(p["buy_notional"] + p["sell_notional"]),
+            "buy_qty": float(p["buy_qty"]),
+            "sell_qty": float(p["sell_qty"]),
+            "trades": p["trades"],
+        }
+        for p in pairs.values()
+    ]
+    pair_list.sort(key=lambda p: p["volume_notional"], reverse=True)
+
+    return {
+        "days": days,
+        "total_notional": float(total_notional),
+        "total_qty": float(total_qty),
+        "total_trades": total_trades,
+        "pairs": pair_list,
+    }
 
 
 async def get_portfolio_history(

@@ -10,6 +10,8 @@ from app.schemas.portfolio import (
     PortfolioItem,
     RecentTrade,
     PortfolioHistoryPoint,
+    VolumeReport,
+    VolumePairReport,
 )
 from app.services import portfolio as portfolio_service
 
@@ -60,3 +62,23 @@ async def portfolio_history(
         db, current_user.id, days=days
     )
     return [PortfolioHistoryPoint(**p) for p in points]
+
+
+@router.get(
+    "/volume",
+    response_model=VolumeReport,
+    dependencies=[Depends(rate_limit_user("portfolio_volume", limit=30, window=60))],
+)
+async def volume_report(
+    days: int = Query(7, ge=1, le=90),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    data = await portfolio_service.get_volume_report(db, current_user.id, days=days)
+    return VolumeReport(
+        days=data["days"],
+        total_notional=data["total_notional"],
+        total_qty=data["total_qty"],
+        total_trades=data["total_trades"],
+        pairs=[VolumePairReport(**p) for p in data["pairs"]],
+    )
