@@ -253,3 +253,41 @@ export interface AdminUserUpdate {
   role?: string;
   is_active?: boolean;
 }
+
+export interface AdminOrderItem {
+  id: string;
+  user_email: string;
+  user_username: string;
+  pair: string;
+  side: string;
+  type: string;
+  price: number | null;
+  qty: number;
+  filled_qty: number;
+  avg_fill_price: number | null;
+  status: string;
+  created_at: string;
+}
+
+export interface AdminOrderList {
+  total: number;
+  orders: AdminOrderItem[];
+}
+
+export interface AdminTradeItem {
+  id: string;
+  order_id: string;
+  user_email: string;
+  user_username: string;
+  pair: string;
+  side: string;
+  price: number;
+  qty: number;
+  notional: number;
+  created_at: string;
+}
+
+export interface AdminTradeList {
+  total: number;
+  trades: AdminTradeItem[];
+}

@@ -1,5 +1,7 @@
 import type {
   AccessTokenResponse,
+  AdminOrderList,
+  AdminTradeList,
   AdminUserDetail,
   AdminUserList,
   AdminUserUpdate,
@@ -315,6 +317,30 @@ export const api = {
       method: "PATCH",
       body,
     }),
+  adminListOrders: (params?: {
+    user?: string;
+    pair?: string;
+    status?: string;
+    side?: string;
+    type?: string;
+    limit?: number;
+    offset?: number;
+  }) =>
+    apiFetch<AdminOrderList>(
+      `/api/v1/admin/orders${buildQuery(params ?? {})}`,
+      { auth: true },
+    ),
+  adminListTrades: (params?: {
+    user?: string;
+    pair?: string;
+    side?: string;
+    limit?: number;
+    offset?: number;
+  }) =>
+    apiFetch<AdminTradeList>(
+      `/api/v1/admin/trades${buildQuery(params ?? {})}`,
+      { auth: true },
+    ),
 };
 
 export const getWsUrl = (pairs: string[]): string => {

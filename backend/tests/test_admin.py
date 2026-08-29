@@ -138,3 +138,74 @@ async def test_admin_user_detail_404(client, db_session):
     headers = await _seed(client, db_session)
     resp = await client.get("/api/v1/admin/users/no-such-id", headers=headers["admin"])
     assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_admin_orders_list(client, db_session):
+    headers = await _seed(client, db_session)
+    await client.post("/api/v1/wallets/deposit", json={"asset_symbol": "USDT", "amount": 10000}, headers=headers["user"])
+    # market order (filled)
+    await client.post("/api/v1/orders", json={"pair": "BTC/USDT", "side": "buy", "qty": 0.05}, headers=headers["user"])
+    # limit order (open)
+    await client.post("/api/v1/orders", json={"pair": "BTC/USDT", "side": "buy", "qty": 0.01, "type": "limit", "price": 1000}, headers=headers["user"])
+
+    resp = await client.get("/api/v1/admin/orders", headers=headers["admin"])
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total"] == 2
+    for o in body["orders"]:
+        assert o["user_email"] == "usr-1@test.com"
+        assert o["user_username"] == "usr-1name"
+        assert o["pair"] == "BTC/USDT"
+    statuses = {o["status"] for o in body["orders"]}
+    assert {"open", "filled"} <= statuses
+
+
+@pytest.mark.asyncio
+async def test_admin_orders_filters(client, db_session):
+    headers = await _seed(client, db_session)
+    await client.post("/api/v1/wallets/deposit", json={"asset_symbol": "USDT", "amount": 10000}, headers=headers["user"])
+    await client.post("/api/v1/orders", json={"pair": "BTC/USDT", "side": "buy", "qty": 0.05}, headers=headers["user"])
+    await client.post("/api/v1/orders", json={"pair": "BTC/USDT", "side": "buy", "qty": 0.01, "type": "limit", "price": 1000}, headers=headers["user"])
+
+    resp = await client.get("/api/v1/admin/orders", params={"status": "open"}, headers=headers["admin"])
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total"] == 1
+    assert body["orders"][0]["status"] == "open"
+
+    # filter by user search
+    resp2 = await client.get("/api/v1/admin/orders", params={"user": "adm-1"}, headers=headers["admin"])
+    assert resp2.status_code == 200
+    assert resp2.json()["total"] == 0
+
+
+@pytest.mark.asyncio
+async def test_admin_trades_list(client, db_session):
+    headers = await _seed(client, db_session)
+    await client.post("/api/v1/wallets/deposit", json={"asset_symbol": "USDT", "amount": 10000}, headers=headers["user"])
+    await client.post("/api/v1/orders", json={"pair": "BTC/USDT", "side": "buy", "qty": 0.05}, headers=headers["user"])
+
+    resp = await client.get("/api/v1/admin/trades", headers=headers["admin"])
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total"] == 1
+    t = body["trades"][0]
+    assert t["user_email"] == "usr-1@test.com"
+    assert t["user_username"] == "usr-1name"
+    assert t["pair"] == "BTC/USDT"
+    assert t["side"] == "buy"
+    assert t["qty"] == 0.05
+
+    # side filter + pair filter + user filter
+    resp2 = await client.get("/api/v1/admin/trades", params={"side": "sell"}, headers=headers["admin"])
+    assert resp2.status_code == 200
+    assert resp2.json()["total"] == 0
+
+    resp3 = await client.get("/api/v1/admin/trades", params={"pair": "BTC/USDT"}, headers=headers["admin"])
+    assert resp3.status_code == 200
+    assert resp3.json()["total"] == 1
+
+    resp4 = await client.get("/api/v1/admin/trades", params={"user": "adm-1"}, headers=headers["admin"])
+    assert resp4.status_code == 200
+    assert resp4.json()["total"] == 0

@@ -9,8 +9,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user import User
 from app.models.wallet import Wallet, WalletType
-from app.models.order import Order
+from app.models.order import Order, OrderStatus, OrderType, OrderSide
 from app.models.trade import Trade
+from app.models.trading_pair import TradingPair
 from app.services.portfolio import _quote_cache
 from app.services.market import _current_price
 
@@ -184,3 +185,133 @@ async def update_user(
     await db.flush()
     await db.refresh(target)
     return target
+
+
+async def list_all_orders(
+    db: AsyncSession,
+    user: str | None = None,
+    pair_symbol: str | None = None,
+    status: str | None = None,
+    side: str | None = None,
+    order_type: str | None = None,
+    date_from=None,
+    date_to=None,
+    limit: int = 50,
+    offset: int = 0,
+) -> dict:
+    conditions = []
+    if user:
+        like = f"%{user}%"
+        conditions.append(or_(User.email.ilike(like), User.username.ilike(like)))
+    if pair_symbol:
+        conditions.append(TradingPair.symbol == pair_symbol)
+    if status:
+        conditions.append(Order.status == OrderStatus(status))
+    if side:
+        conditions.append(Order.side == OrderSide(side))
+    if order_type:
+        conditions.append(Order.type == OrderType(order_type))
+    if date_from:
+        conditions.append(Order.created_at >= date_from)
+    if date_to:
+        conditions.append(Order.created_at <= date_to)
+
+    base = (
+        select(Order, User.email, User.username, TradingPair.symbol)
+        .join(User, User.id == Order.user_id)
+        .join(TradingPair, TradingPair.id == Order.pair_id)
+    )
+    count_base = (
+        select(func.count())
+        .select_from(Order)
+        .join(User, User.id == Order.user_id)
+        .join(TradingPair, TradingPair.id == Order.pair_id)
+    )
+    for c in conditions:
+        base = base.where(c)
+        count_base = count_base.where(c)
+
+    total = (await db.execute(count_base)).scalar_one()
+    result = await db.execute(
+        base.order_by(Order.created_at.desc()).offset(offset).limit(limit)
+    )
+    items = [
+        {
+            "id": o.id,
+            "user_email": email,
+            "user_username": username,
+            "pair": sym,
+            "side": o.side.value,
+            "type": o.type.value,
+            "price": float(o.price) if o.price is not None else None,
+            "qty": float(o.qty),
+            "filled_qty": float(o.filled_qty),
+            "avg_fill_price": float(o.avg_fill_price)
+            if o.avg_fill_price is not None
+            else None,
+            "status": o.status.value,
+            "created_at": o.created_at,
+        }
+        for o, email, username, sym in result.all()
+    ]
+    return {"total": int(total), "orders": items}
+
+
+async def list_all_trades(
+    db: AsyncSession,
+    user: str | None = None,
+    pair_symbol: str | None = None,
+    side: str | None = None,
+    date_from=None,
+    date_to=None,
+    limit: int = 50,
+    offset: int = 0,
+) -> dict:
+    conditions = []
+    if user:
+        like = f"%{user}%"
+        conditions.append(or_(User.email.ilike(like), User.username.ilike(like)))
+    if pair_symbol:
+        conditions.append(TradingPair.symbol == pair_symbol)
+    if side:
+        conditions.append(Trade.side == side)
+    if date_from:
+        conditions.append(Trade.created_at >= date_from)
+    if date_to:
+        conditions.append(Trade.created_at <= date_to)
+
+    base = (
+        select(Trade, User.email, User.username, TradingPair.symbol)
+        .join(User, User.id == Trade.user_id)
+        .join(TradingPair, TradingPair.id == Trade.pair_id)
+    )
+    count_base = (
+        select(func.count())
+        .select_from(Trade)
+        .join(User, User.id == Trade.user_id)
+        .join(TradingPair, TradingPair.id == Trade.pair_id)
+    )
+    for c in conditions:
+        base = base.where(c)
+        count_base = count_base.where(c)
+
+    total = (await db.execute(count_base)).scalar_one()
+    result = await db.execute(
+        base.order_by(Trade.created_at.desc()).offset(offset).limit(limit)
+    )
+    items = [
+        {
+            "id": t.id,
+            "order_id": t.order_id,
+            "user_email": email,
+            "user_username": username,
+            "pair": sym,
+            "side": t.side,
+            "price": float(t.price),
+            "qty": float(t.qty),
+            "notional": float(t.notional),
+            "created_at": t.created_at,
+        }
+        for t, email, username, sym in result.all()
+    ]
+    return {"total": int(total), "trades": items}

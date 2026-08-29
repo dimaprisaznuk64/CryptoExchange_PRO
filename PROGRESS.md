@@ -5,7 +5,7 @@
 ## Останнє оновлення
 
 - Дата: 2026-08-29
-- Стан: **Phase 25 (Адмін-кабінет part 1: керування користувачами) — завершено.**
+- Стан: **Phase 26 (Адмін part 2: перегляд ордерів/трейдів всіх користувачів) — завершено.**
 - Робоча папка: `C:\Users\DIMAS\Desktop\Programming\PythonPRO\CryptoExchange_PRO`
 
 ### Що зроблено в Phase 0:
@@ -223,6 +223,14 @@
 - Live: eager-виконання всіх 3 тасок (refresh {'pairs':4}, cleanup {'removed':0}, cond {'executed':0}); **celery worker запустився**: `Connected to redis://localhost:6380/1` → `celery@Dimas ready`
 - Коміт: див. git log (Phase 16)
 
+### Що зроблено в Phase 26 (Адмін part 2: перегляд ордерів/трейдів всіх користувачів):
+- **Backend**:
+  - `services/admin.py`: `list_all_orders` + `list_all_trades` — JOIN з `User` (email/username) та `TradingPair` (symbol), фільтри (user search по email/username, pair, status, side, type, from/to), пагінація + total
+  - `routers/admin.py`: `GET /admin/orders`, `GET /admin/trades` (rate_limit per-endpoint); `schemas/admin.py` → `AdminOrderItem/AdminOrderList`, `AdminTradeItem/AdminTradeList`
+- **Frontend**: сторінка `/admin/activity` (вкладки Orders/Trades + фільтри: юзер, пара, сторона, статус, тип), типи `AdminOrder*`/`AdminTrade*`, `api.adminListOrders/adminListTrades`; Navbar → роадмін-пункти Users + Activity
+- Тести: +3 → **99 passed**; frontend lint+build green
+- Коміт: див. git log (Phase 26)
+
 ### Що зроблено в Phase 25 (Адмін-кабінет part 1: керування користувачами):
 - **Backend**:
   - `services/admin.py`: `list_users` (batch-агрегація: total USD spot за поточними цінами, # ордерів, # тредів; пошук email/username), `get_user_detail` (профіль + гаманці + підсумки), `update_user` (роль/is_active) із **self-protection** (адмін не може змінити власну роль чи заблокувати себе)
@@ -315,7 +323,7 @@
 
 ## Наступний крок
 
-- ➡️ Кандидати на Phase 26+: адмін part 2 (ордери/трейди всіх юзерів), адмін part 3 (дашборд/статистика), фактичний запуск деплою
+- ➡️ Кандидати на Phase 27+: адмін part 3 (дашборд/статистика), фактичний запуск деплою
 - ➡️ Майбутнє (ideas): сповіщення, деплой (Vercel + Docker)
 
 ## Roadmap (фази)
@@ -348,6 +356,7 @@
 | 23 | Сповіщення користувача (/notifications + WS) | ✅ (додано) |
 | 24 | Деплой: Docker backend + Vercel frontend | ✅ (конфіги + docs) |
 | 25 | Адмін-кабінет part 1: керування користувачами | ✅ (додано) |
+| 26 | Адмін part 2: перегляд ордерів/трейдів всіх користувачів | ✅ (додано) |
 
 ## Як запустити frontend
 

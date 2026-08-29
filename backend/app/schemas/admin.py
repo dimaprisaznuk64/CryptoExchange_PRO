@@ -48,3 +48,41 @@ class AdminUserDetail(BaseModel):
 class AdminUserUpdate(BaseModel):
     role: UserRole | None = None
     is_active: bool | None = None
+
+
+class AdminOrderItem(BaseModel):
+    id: str
+    user_email: str
+    user_username: str
+    pair: str
+    side: str
+    type: str
+    price: float | None
+    qty: float
+    filled_qty: float
+    avg_fill_price: float | None
+    status: str
+    created_at: datetime
+
+
+class AdminOrderList(BaseModel):
+    total: int
+    orders: list[AdminOrderItem]
+
+
+class AdminTradeItem(BaseModel):
+    id: str
+    order_id: str
+    user_email: str
+    user_username: str
+    pair: str
+    side: str
+    price: float
+    qty: float
+    notional: float
+    created_at: datetime
+
+
+class AdminTradeList(BaseModel):
+    total: int
+    trades: list[AdminTradeItem]
