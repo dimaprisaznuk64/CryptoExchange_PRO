@@ -66,3 +66,68 @@ async def test_failed_login_counter_reaches_threshold(client, db_session, monkey
 
     suspicious = [e for e in events if e[0] == "suspicious_login_activity"]
     assert suspicious, "expected a suspicious_login_activity audit event after 5 failed logins"
+
+
+@pytest.mark.asyncio
+async def test_account_lockout_after_failed_logins(client, db_session):
+    await _create_user(db_session, "u-lock", "lock@test.com", "lockuser")
+
+    from app.core.ratelimit import FAILED_LOGIN_THRESHOLD
+
+    for _ in range(FAILED_LOGIN_THRESHOLD):
+        resp = await client.post("/api/v1/auth/login", json={
+            "email": "lock@test.com", "password": "wrongpass",
+        })
+        assert resp.status_code == 401
+
+    assert int(await cache.redis_client.get("auth:lock:lock@test.com")) == 1
+
+    resp = await client.post("/api/v1/auth/login", json={
+        "email": "lock@test.com", "password": "secret123",
+    })
+    assert resp.status_code == 423
+    assert resp.json()["detail"]
+    assert "Retry-After" in resp.headers
+
+
+@pytest.mark.asyncio
+async def test_successful_login_resets_lockout(client, db_session):
+    await _create_user(db_session, "u-reset", "reset@test.com", "resetuser")
+
+    from app.core.ratelimit import FAILED_LOGIN_THRESHOLD
+
+    for _ in range(FAILED_LOGIN_THRESHOLD - 1):
+        resp = await client.post("/api/v1/auth/login", json={
+            "email": "reset@test.com", "password": "wrongpass",
+        })
+        assert resp.status_code == 401
+
+    resp = await client.post("/api/v1/auth/login", json={
+        "email": "reset@test.com", "password": "secret123",
+    })
+    assert resp.status_code == 200
+
+    fail_key = await cache.redis_client.get("auth:failed:reset@test.com")
+    assert fail_key is None or int(fail_key) == 0
+
+    resp = await client.post("/api/v1/auth/login", json={
+        "email": "reset@test.com", "password": "secret123",
+    })
+    assert resp.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_per_user_rate_limit_on_place_order(client, db_session):
+    from app.core.security import create_access_token
+
+    await _create_user(db_session, "u-rl-order", "rlorder@test.com", "rlorderuser")
+    token = create_access_token("u-rl-order")
+    headers = {"Authorization": f"Bearer {token}"}
+    payload = {"pair": "BTC/USDT", "side": "buy", "type": "market", "qty": 0.001}
+
+    limit = 20
+    for _ in range(limit):
+        await client.post("/api/v1/orders", json=payload, headers=headers)
+
+    resp = await client.post("/api/v1/orders", json=payload, headers=headers)
+    assert resp.status_code == 429

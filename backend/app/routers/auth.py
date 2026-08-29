@@ -5,7 +5,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import cache
 from app.core.audit import log as audit_log
 from app.core.database import get_db
-from app.core.ratelimit import rate_limit
+from app.core.ratelimit import (
+    rate_limit,
+    is_account_locked,
+    record_failed_login,
+    reset_failed_logins,
+    AccountLocked,
+)
 from app.core.security import (
     hash_password,
     verify_password,
@@ -75,6 +81,12 @@ async def login(
     db: AsyncSession = Depends(get_db),
 ):
     ip = _ip_of(request)
+
+    remaining = await is_account_locked(data.email)
+    if remaining > 0:
+        audit_log("auth.login_locked", email=data.email, ip=ip, retry_after=remaining)
+        raise AccountLocked(retry_after=remaining)
+
     result = await db.execute(select(User).where(User.email == data.email))
     user = result.scalar_one_or_none()
     if not user or not verify_password(data.password, user.hashed_password):
@@ -94,6 +106,7 @@ async def login(
                     )
             except Exception:
                 pass
+        await record_failed_login(data.email)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
@@ -104,6 +117,7 @@ async def login(
             detail="Account is blocked",
         )
 
+    await reset_failed_logins(user.email)
     audit_log("auth.login", user_id=user.id, email=user.email, ip=ip)
 
     return TokenResponse(

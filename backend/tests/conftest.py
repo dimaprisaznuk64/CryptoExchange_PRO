@@ -67,6 +67,9 @@ class InMemoryRedisMock:
         self._data[key] = str(self._norm(key))
         return 1
 
+    async def ttl(self, key):
+        return -1 if key not in self._data else 60
+
     async def set(self, key, value, ex=None, nx=False):
         if nx and key in self._data:
             return 0

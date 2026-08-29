@@ -16,7 +16,7 @@ from app.core.config import get_settings
 from app.core.logging import setup_logging
 from app.core.cache import init_redis, close_redis
 from app.core.database import async_session
-from app.core.ratelimit import RateLimitExceeded
+from app.core.ratelimit import AccountLocked, RateLimitExceeded
 from app.routers import health, auth, wallets, market, orders, portfolio, ws
 from app.services import trading as trading_service
 
@@ -104,6 +104,15 @@ async def add_security_headers(request: Request, call_next):
 async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
     return JSONResponse(
         status_code=429,
+        content={"detail": exc.detail},
+        headers={"Retry-After": str(exc.headers["Retry-After"])} if exc.headers else None,
+    )
+
+
+@app.exception_handler(AccountLocked)
+async def account_locked_handler(request: Request, exc: AccountLocked):
+    return JSONResponse(
+        status_code=423,
         content={"detail": exc.detail},
         headers={"Retry-After": str(exc.headers["Retry-After"])} if exc.headers else None,
     )

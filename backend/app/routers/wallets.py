@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.ratelimit import rate_limit_user
 from app.dependencies.auth import get_current_user
 from app.models.user import User
 from app.models.asset import Asset
@@ -75,7 +76,11 @@ async def get_transactions(
     return result
 
 
-@router.post("/deposit", response_model=BalanceResponse)
+@router.post(
+    "/deposit",
+    response_model=BalanceResponse,
+    dependencies=[Depends(rate_limit_user("wallets_deposit", limit=10, window=60))],
+)
 async def deposit(
     data: DepositRequest,
     current_user: User = Depends(get_current_user),
@@ -94,7 +99,11 @@ async def deposit(
     return BalanceResponse(items=[BalanceItem(**i) for i in items])
 
 
-@router.post("/withdraw", response_model=BalanceResponse)
+@router.post(
+    "/withdraw",
+    response_model=BalanceResponse,
+    dependencies=[Depends(rate_limit_user("wallets_withdraw", limit=10, window=60))],
+)
 async def withdraw(
     data: WithdrawRequest,
     current_user: User = Depends(get_current_user),

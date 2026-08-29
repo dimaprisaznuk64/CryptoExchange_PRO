@@ -5,7 +5,7 @@
 ## Останнє оновлення
 
 - Дата: 2026-08-29
-- Стан: **Phase 17 (Security: rate limiting + audit + security headers) — завершено.**
+- Стан: **Phase 18 (Security: account lockout + rate-limit на мутації) — завершено.**
 - Робоча папка: `C:\Users\DIMAS\Desktop\Programming\PythonPRO\CryptoExchange_PRO`
 
 ### Що зроблено в Phase 0:
@@ -223,6 +223,16 @@
 - Live: eager-виконання всіх 3 тасок (refresh {'pairs':4}, cleanup {'removed':0}, cond {'executed':0}); **celery worker запустився**: `Connected to redis://localhost:6380/1` → `celery@Dimas ready`
 - Коміт: див. git log (Phase 16)
 
+### Що зроблено в Phase 18 (Security harden — account lockout + rate-limit на мутації):
+- `app/core/ratelimit.py` — account lockout: `record_failed_login(email)` (лічильник на акаунт `auth:failed:<email>`, на порозі `FAILED_LOGIN_THRESHOLD=5` ставить `auth:lock:<email>` TTL 15хв), `is_account_locked(email)` (повертає залишок секунд через `ttl`), `reset_failed_logins(email)` (очистка успішним логіном); виняток `AccountLocked` (423 + `Retry-After`)
+- `rate_limit_user(scope, limit, window)` — rate-limit **на автентифікованого користувача** (ключі `user.id` + IP), через `get_current_user`
+- `app/routers/auth.py` — login перевіряє lockout перед валідацією пароля (423), на невдачу рекордить і per-IP і per-account, на успіх `reset_failed_logins`; audit-подія `auth.login_locked`
+- `app/main.py` — exception-handler для `AccountLocked` (423 + Retry-After)
+- `app/routers/wallets.py` — `rate_limit_user` на `/deposit` і `/withdraw` (10/60s)
+- `app/routers/orders.py` — `rate_limit_user` на place order і cancel (20/60s)
+- Redis mock: додано `ttl`; тести — lockout після 5 невдалих, reset успішним логіном, per-user 429 на ордери → **71 passed**
+- Коміт: див. git log (Phase 18)
+
 ### Що зроблено в Phase 17 (Security — rate limit + audit + security headers):
 - `app/core/ratelimit.py` — fixed-window rate limit на Redis (pipeline incr+expire nx), fail-open якщо Redis недоступний, `RateLimitExceeded` (429 + `Retry-After`)
 - `app/core/audit.py` — структурований JSON audit-лог (event, UTC, без секретів, обрізання довгих полів) → `logs/audit.log` (Rotating 5MB×3, `audit` logger окремо від app)
@@ -242,7 +252,7 @@
 
 ## Наступний крок
 
-- ➡️ Кандидати на Phase 18+: адмін-кабінет, 24h-статистика ринку, звіт за обсягом, переказ між гаманцями, rate-limit для решти ендпоінтів (wallets/orders), account lockout після багатьох невдалих логінів
+- ➡️ Кандидати на Phase 19+: адмін-кабінет, 24h-статистика ринку, звіт за обсягом, переказ між гаманцями, rate-limit для read-ендпоінтів (market/portfolio/lists)
 - ➡️ Майбутнє (ideas): сповіщення, деплой (Vercel + Docker)
 
 ## Roadmap (фази)
@@ -267,6 +277,7 @@
 | 15 | Redis (реальне використання: кеш) | ✅ (додано) |
 | 16 | Celery (фонова черга) | ✅ (додано) |
 | 17 | Security (rate limit, audit, headers) | ✅ (додано) |
+| 18 | Security harden (lockout, per-user rate limit) | ✅ (додано) |
 
 ## Як запустити frontend
 
