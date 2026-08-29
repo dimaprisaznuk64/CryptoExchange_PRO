@@ -30,3 +30,15 @@ def setup_logging() -> None:
     )
     file_handler.setFormatter(formatter)
     root.addHandler(file_handler)
+
+    audit = logging.getLogger("audit")
+    audit.setLevel(logging.INFO)
+    audit.propagate = False
+    audit_handler = RotatingFileHandler(
+        "logs/audit.log",
+        maxBytes=5 * 1024 * 1024,
+        backupCount=3,
+        encoding="utf-8",
+    )
+    audit_handler.setFormatter(logging.Formatter("%(message)s"))
+    audit.addHandler(audit_handler)

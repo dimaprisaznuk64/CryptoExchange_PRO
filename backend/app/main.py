@@ -16,6 +16,7 @@ from app.core.config import get_settings
 from app.core.logging import setup_logging
 from app.core.cache import init_redis, close_redis
 from app.core.database import async_session
+from app.core.ratelimit import RateLimitExceeded
 from app.routers import health, auth, wallets, market, orders, portfolio, ws
 from app.services import trading as trading_service
 
@@ -79,6 +80,32 @@ if settings.ALLOWED_HOSTS.strip() != "*":
     app.add_middleware(
         TrustedHostMiddleware,
         allowed_hosts=settings.allowed_hosts_list,
+    )
+
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "no-referrer")
+    response.headers.setdefault(
+        "Permissions-Policy", "camera=(), microphone=(), geolocation=()"
+    )
+    response.headers.setdefault(
+        "Content-Security-Policy",
+        "default-src 'self'; img-src 'self' data:; "
+        "script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'",
+    )
+    return response
+
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(
+        status_code=429,
+        content={"detail": exc.detail},
+        headers={"Retry-After": str(exc.headers["Retry-After"])} if exc.headers else None,
     )
 
 app.include_router(health.router, prefix=settings.API_V1_PREFIX)

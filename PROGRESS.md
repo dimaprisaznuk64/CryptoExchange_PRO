@@ -4,8 +4,8 @@
 
 ## Останнє оновлення
 
-- Дата: 2026-08-28
-- Стан: **Phase 16 = офіц. PHASE 9 (Celery) — завершено.**
+- Дата: 2026-08-29
+- Стан: **Phase 17 (Security: rate limiting + audit + security headers) — завершено.**
 - Робоча папка: `C:\Users\DIMAS\Desktop\Programming\PythonPRO\CryptoExchange_PRO`
 
 ### Що зроблено в Phase 0:
@@ -223,6 +223,16 @@
 - Live: eager-виконання всіх 3 тасок (refresh {'pairs':4}, cleanup {'removed':0}, cond {'executed':0}); **celery worker запустився**: `Connected to redis://localhost:6380/1` → `celery@Dimas ready`
 - Коміт: див. git log (Phase 16)
 
+### Що зроблено в Phase 17 (Security — rate limit + audit + security headers):
+- `app/core/ratelimit.py` — fixed-window rate limit на Redis (pipeline incr+expire nx), fail-open якщо Redis недоступний, `RateLimitExceeded` (429 + `Retry-After`)
+- `app/core/audit.py` — структурований JSON audit-лог (event, UTC, без секретів, обрізання довгих полів) → `logs/audit.log` (Rotating 5MB×3, `audit` logger окремо від app)
+- `app/routers/auth.py` — rate limit на `/register` і `/login` (20/60s на IP), лічильник невдалих логінів у Redis (key `auth:failed:<ip>`, TTL 5хв, поріг 5 → подія `suspicious_login_activity`), audit-події register/login/login_failed
+- `app/main.py` — security headers (X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy, CSP), exception-handler для 429
+- Фікс багів: `_ip_of` викликався без `await` (RunTimeWarning); `from app.core.cache import redis_client` біндився на import-time `None` → rate-limit і fail-counter **не працювали в рантаймі** (виправлено на динамічний `cache.redis_client` у ratelimit.py та auth.py)
+- Redis mock розширено (`incr`/`expire`/`pipeline` sync-ланцюжок) — реальна перевірка rate limit у тестах
+- Тести: `tests/test_security.py` → +4 (security headers, register 429, login 429, failed-login counter+suspicious) → **68 passed**
+- Коміт: див. git log (Phase 17)
+
 ### Примітка щодо портів (2026-08-28, тимчасово)
 - Docker auto-restore підняв контейнери іншого проєкту (InternetShop_PRO), які зайняли **8000** (backend) і **3000** (frontend)
 - Тому наш стек працює на **backend `:8001`**, **frontend `:3001`**:
@@ -232,7 +242,7 @@
 
 ## Наступний крок
 
-- ➡️ Кандидати на Phase 15: адмін-кабінет, 24h-статистика ринку, звіт за обсягом, переказ між гаманцями
+- ➡️ Кандидати на Phase 18+: адмін-кабінет, 24h-статистика ринку, звіт за обсягом, переказ між гаманцями, rate-limit для решти ендпоінтів (wallets/orders), account lockout після багатьох невдалих логінів
 - ➡️ Майбутнє (ideas): сповіщення, деплой (Vercel + Docker)
 
 ## Roadmap (фази)
@@ -254,6 +264,9 @@
 | 12 | Фільтри історії (orders/trades) | ✅ (додано) |
 | 13 | 7-денна історія портфеля | ✅ (додано) |
 | 14 | Фільтри транзакцій | ✅ (додано) |
+| 15 | Redis (реальне використання: кеш) | ✅ (додано) |
+| 16 | Celery (фонова черга) | ✅ (додано) |
+| 17 | Security (rate limit, audit, headers) | ✅ (додано) |
 
 ## Як запустити frontend
 

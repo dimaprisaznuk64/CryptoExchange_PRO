@@ -31,12 +31,14 @@ class InMemoryRedisMock:
     async def ping(self):
         return True
 
+    async def set(self, key, value, ex=None, nx=False):
+        if nx and key in self._data:
+            return 0
+        self._data[key] = str(value)
+        return 1
+
     async def get(self, key):
         return self._data.get(key)
-
-    async def set(self, key, value, ex=None):
-        self._data[key] = str(value)
-        return True
 
     async def exists(self, key):
         return 1 if key in self._data else 0
@@ -48,6 +50,56 @@ class InMemoryRedisMock:
                 del self._data[k]
                 count += 1
         return count
+
+    def _norm(self, key):
+        raw = self._data.get(key)
+        try:
+            return int(raw)
+        except (TypeError, ValueError):
+            return 0
+
+    async def incr(self, key):
+        value = int(self._norm(key)) + 1
+        self._data[key] = str(value)
+        return value
+
+    async def expire(self, key, seconds, nx=False):
+        self._data[key] = str(self._norm(key))
+        return 1
+
+    async def set(self, key, value, ex=None, nx=False):
+        if nx and key in self._data:
+            return 0
+        self._data[key] = str(value)
+        return 1
+
+    def pipeline(self, transaction=True):
+        import asyncio
+        from types import SimpleNamespace
+        pipe = SimpleNamespace(_pending=[], _parent=self)
+
+        def incr(key):
+            pipe._pending.append(("incr", (key,)))
+            return pipe
+
+        def expire(key, seconds, nx=False):
+            pipe._pending.append(("expire", (key, seconds, nx)))
+            return pipe
+
+        async def execute():
+            results = []
+            for cmd, args in pipe._pending:
+                if cmd == "incr":
+                    results.append(await pipe._parent.incr(*args))
+                elif cmd == "expire":
+                    results.append(await pipe._parent.expire(*args))
+            pipe._pending = []
+            return results
+
+        pipe.incr = incr
+        pipe.expire = expire
+        pipe.execute = execute
+        return pipe
 
     async def scan_iter(self, match="*"):
         for k in list(self._data.keys()):
