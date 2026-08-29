@@ -8,7 +8,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.ratelimit import rate_limit
 from app.models.trading_pair import TradingPair
-from app.schemas.market import PairResponse, TickerResponse, CandleResponse
+from app.schemas.market import (
+    PairResponse,
+    TickerResponse,
+    CandleResponse,
+    MarketStatsResponse,
+)
 from app.services import market as market_service
 
 router = APIRouter(prefix="/market", tags=["market"])
@@ -61,6 +66,17 @@ async def get_ticker(symbol: str, db: AsyncSession = Depends(get_db)):
     pair = await _get_pair(db, symbol)
     base, quote = symbol.split("/")
     return await market_service.get_ticker_cached(symbol, base, quote)
+
+
+@router.get(
+    "/stats/{symbol:path}",
+    response_model=MarketStatsResponse,
+    dependencies=[Depends(rate_limit("market_stats", limit=120, window=60))],
+)
+async def get_stats_24h(symbol: str, db: AsyncSession = Depends(get_db)):
+    await _get_pair(db, symbol)
+    base, quote = symbol.split("/")
+    return await market_service.get_stats_24h_cached(symbol, base, quote)
 
 
 @router.get(

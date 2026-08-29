@@ -83,3 +83,41 @@ async def test_ticker_uses_redis_cache(client, db_session):
     assert all_resp.status_code == 200
     cached_all = await cache_module.redis_client.get("market:tickers")
     assert cached_all is not None
+
+
+@pytest.mark.asyncio
+async def test_stats_24h(client, db_session):
+    await seed_catalog(db_session)
+    resp = await client.get("/api/v1/market/stats/BTC/USDT")
+    assert resp.status_code == 200
+    stats = resp.json()
+    assert stats["pair"] == "BTC/USDT"
+    assert stats["base_asset"] == "BTC"
+    assert stats["quote_asset"] == "USDT"
+    assert stats["last"] > 0
+    assert stats["open_24h"] > 0
+    assert stats["high_24h"] >= stats["low_24h"]
+    assert stats["volume_24h"] > 0
+    assert stats["volume_base_24h"] > 0
+    assert stats["trades_24h"] > 0
+    assert abs(stats["change_24h"]) < 1
+
+
+@pytest.mark.asyncio
+async def test_stats_24h_cached(client, db_session):
+    await seed_catalog(db_session)
+    import app.core.cache as cache_module
+    await cache_module.redis_client.flushdb()
+
+    resp = await client.get("/api/v1/market/stats/BTC/USDT")
+    assert resp.status_code == 200
+
+    cached = await cache_module.redis_client.get("market:stats24:BTC/USDT")
+    assert cached is not None and "BTC/USDT" in cached
+
+
+@pytest.mark.asyncio
+async def test_stats_24h_unknown_pair_404(client, db_session):
+    await seed_catalog(db_session)
+    resp = await client.get("/api/v1/market/stats/DOGE/BTC")
+    assert resp.status_code == 404

@@ -2,6 +2,7 @@ import type {
   AccessTokenResponse,
   BalanceResponse,
   Candle,
+  MarketStats,
   Order,
   PortfolioHistoryPoint,
   PortfolioResponse,
@@ -199,6 +200,8 @@ export const api = {
     apiFetch<Candle[]>(
       `/api/v1/market/candles/${encodeURIComponent(symbol)}?interval=${interval}&limit=${limit}`,
     ),
+  getMarketStats: (symbol: string) =>
+    apiFetch<MarketStats>(`/api/v1/market/stats/${encodeURIComponent(symbol)}`),
 
   // wallets
   getBalances: () => apiFetch<BalanceResponse>("/api/v1/wallets/balances", { auth: true }),

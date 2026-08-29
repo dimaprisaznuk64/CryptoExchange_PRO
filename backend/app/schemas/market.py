@@ -26,6 +26,21 @@ class TickerResponse(BaseModel):
     volume_24h: float
 
 
+class MarketStatsResponse(BaseModel):
+    pair: str
+    base_asset: str
+    quote_asset: str
+    last: float
+    open_24h: float
+    high_24h: float
+    low_24h: float
+    close_24h: float
+    change_24h: float
+    volume_24h: float
+    volume_base_24h: float
+    trades_24h: int
+
+
 class CandleResponse(BaseModel):
     time: datetime
     open: Decimal

@@ -5,7 +5,7 @@
 ## Останнє оновлення
 
 - Дата: 2026-08-29
-- Стан: **Phase 20 (Переказ між гаманцями spot↔funding) — завершено.**
+- Стан: **Phase 21 (24h-статистика ринку) — завершено.**
 - Робоча папка: `C:\Users\DIMAS\Desktop\Programming\PythonPRO\CryptoExchange_PRO`
 
 ### Що зроблено в Phase 0:
@@ -223,6 +223,13 @@
 - Live: eager-виконання всіх 3 тасок (refresh {'pairs':4}, cleanup {'removed':0}, cond {'executed':0}); **celery worker запустився**: `Connected to redis://localhost:6380/1` → `celery@Dimas ready`
 - Коміт: див. git log (Phase 16)
 
+### Що зроблено в Phase 21 (24h-статистика ринку):
+- `app/services/market.py` — `get_stats_24h(pair)` + `get_stats_24h_cached(...)`: OHLC, change %, volume (quote і base), count тредів; Redis-кеш `market:stats24:{symbol}` TTL 30s (graceful fallback)
+- `GET /api/v1/market/stats/{symbol}` → `MarketStatsResponse` (public, per-IP rate_limit 120/60s, 404 для невідомої пари)
+- Frontend: `MarketStatsPanel` (новий компонент) на сторінці `/trade` — сітка 24h статистики (Open/High/Low/Change/Volume quote+base/Trades/24h range); `api.getMarketStats`, тип `MarketStats`
+- Тести: +3 (данi stats, Redis-кеш, 404) → **81 passed**; frontend lint+build green
+- Коміт: див. git log (Phase 21)
+
 ### Що зроблено в Phase 20 (Переказ між гаманцями):
 - `app/services/wallet.py` — `transfer(db, user_id, symbol, from_type, to_type, amount)`: атомарно (row-lock обох гаманців) дебетує available джерела → кредитує balance+available цілі; валідація amount>0, from!=to, типи spot/funding, достатність; заборона переказу в той самий тип
 - Леджер: 2 транзакції типу `transfer` (джерело −delta, ціль +delta), зв'язані спільним `ref_id` (`<from_wallet>:<to_wallet>`)
@@ -270,7 +277,7 @@
 
 ## Наступний крок
 
-- ➡️ Кандидати на Phase 21+: адмін-кабінет, 24h-статистика ринку, звіт за обсягом, сповіщення, деплой (Vercel + Docker)
+- ➡️ Кандидати на Phase 22+: адмін-кабінет, сповіщення користувача, звіт за обсягом, деплой (Vercel + Docker)
 - ➡️ Майбутнє (ideas): сповіщення, деплой (Vercel + Docker)
 
 ## Roadmap (фази)
@@ -298,6 +305,7 @@
 | 18 | Security harden (lockout, per-user rate limit) | ✅ (додано) |
 | 19 | Security: rate-limit на read-ендпоінти | ✅ (додано) |
 | 20 | Переказ між гаманцями (spot↔funding) | ✅ (додано) |
+| 21 | 24h-статистика ринку (/market/stats) | ✅ (додано) |
 
 ## Як запустити frontend
 

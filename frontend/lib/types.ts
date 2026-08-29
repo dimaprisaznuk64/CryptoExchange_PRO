@@ -40,6 +40,21 @@ export interface Ticker {
   volume_24h: number;
 }
 
+export interface MarketStats {
+  pair: string;
+  base_asset: string;
+  quote_asset: string;
+  last: number;
+  open_24h: number;
+  high_24h: number;
+  low_24h: number;
+  close_24h: number;
+  change_24h: number;
+  volume_24h: number;
+  volume_base_24h: number;
+  trades_24h: number;
+}
+
 export interface Candle {
   time: string;
   open: number;

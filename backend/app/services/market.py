@@ -94,6 +94,47 @@ def get_ticker(pair_symbol: str, base: Decimal, quote: Decimal) -> dict:
     }
 
 
+def get_stats_24h(pair_symbol: str, base: str, quote: str) -> dict:
+    """Richer 24h market stats (OHLC, change %, volume in quote and base, trade count).
+
+    Deterministic simulated feed, consistent with get_ticker/get_ohlc.
+    """
+    now = datetime.now(UTC)
+    open_price = _price_at(pair_symbol, now - timedelta(hours=24))
+    close_price = _current_price(pair_symbol)
+    change = (close_price - open_price) / open_price if open_price else Decimal("0")
+    high = max(close_price, open_price) * (Decimal("1") + Decimal("0.012"))
+    low = min(close_price, open_price) * (Decimal("1") - Decimal("0.012"))
+    volume_quote = Decimal(_hash_seed(pair_symbol + ":vol") % 4000 + 500)
+    avg_price = (high + low) / Decimal("2")
+    volume_base = volume_quote / avg_price if avg_price else Decimal("0")
+    trades = _hash_seed(pair_symbol + ":trades") % 900 + 120
+
+    return {
+        "pair": pair_symbol,
+        "base_asset": base,
+        "quote_asset": quote,
+        "last": float(close_price),
+        "open_24h": float(open_price),
+        "high_24h": float(high),
+        "low_24h": float(low),
+        "close_24h": float(close_price),
+        "change_24h": float(change),
+        "volume_24h": float(volume_quote),
+        "volume_base_24h": float(volume_base),
+        "trades_24h": int(trades),
+    }
+
+
+async def get_stats_24h_cached(pair_symbol: str, base: str, quote: str) -> dict:
+    cached = await cache_get(f"market:stats24:{pair_symbol}")
+    if cached is not None:
+        return cached
+    stats = get_stats_24h(pair_symbol, base, quote)
+    await cache_set(f"market:stats24:{pair_symbol}", stats, TICKERS_CACHE_TTL)
+    return stats
+
+
 async def get_ticker_cached(pair_symbol: str, base: str, quote: str) -> dict:
     """Ticker with Redis cache (graceful fallback when Redis is down)."""
     cached = await cache_get(f"market:ticker:{pair_symbol}")

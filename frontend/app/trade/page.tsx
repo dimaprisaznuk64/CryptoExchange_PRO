@@ -10,6 +10,7 @@ import { Protected } from "@/components/Protected";
 import { Alert, Badge, Button, Card, CardHeader, Input, Select, Spinner } from "@/components/ui";
 import { OrderBook } from "@/components/OrderBook";
 import { CandleChart } from "@/components/CandleChart";
+import { MarketStatsPanel } from "@/components/MarketStatsPanel";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDateTime, formatPercent, formatPrice } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -218,6 +219,8 @@ function TradingView() {
           to place orders and track your portfolio.
         </Alert>
       )}
+
+      <MarketStatsPanel pair={pair} />
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
