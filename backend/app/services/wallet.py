@@ -133,6 +133,86 @@ async def debit(
     return wallet
 
 
+async def transfer(
+    db: AsyncSession,
+    user_id: str,
+    symbol: str,
+    from_type: WalletType,
+    to_type: WalletType,
+    amount: float,
+    note: Optional[str] = None,
+) -> Wallet:
+    """Move funds from one wallet type to another for the same user.
+
+    Atomically debits the source wallet's available balance and credits the
+    target wallet, recording a `transfer` transaction on each side linked by a
+    shared `ref_id`.
+    """
+    if amount <= 0:
+        raise HTTPException(status_code=400, detail="Amount must be positive")
+    if from_type == to_type:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Source and target wallet types must differ",
+        )
+    if from_type not in (WalletType.spot, WalletType.funding) or to_type not in (
+        WalletType.spot,
+        WalletType.funding,
+    ):
+        raise HTTPException(status_code=400, detail="Invalid wallet type")
+
+    asset = await get_or_create_asset(db, symbol)
+    from_wallet = await get_or_create_wallet(db, user_id, asset.id, from_type)
+    to_wallet = await get_or_create_wallet(db, user_id, asset.id, to_type)
+    await _lock_wallet(db, from_wallet.id)
+    await _lock_wallet(db, to_wallet.id)
+
+    delta = _to_dec(amount)
+    if _to_dec(from_wallet.available) < delta:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Insufficient available balance",
+        )
+
+    from_wallet.balance = _to_dec(from_wallet.balance) - delta
+    from_wallet.available = _to_dec(from_wallet.available) - delta
+    to_wallet.balance = _to_dec(to_wallet.balance) + delta
+    to_wallet.available = _to_dec(to_wallet.available) + delta
+    await db.flush()
+
+    transfer_ref = f"{from_wallet.id}:{to_wallet.id}"
+    db.add(
+        Transaction(
+            user_id=user_id,
+            wallet_id=from_wallet.id,
+            asset_id=asset.id,
+            type=TransactionType.transfer,
+            status=TransactionStatus.completed,
+            amount=delta,
+            delta=-delta,
+            ref_id=transfer_ref,
+            note=note or f"Transfer to {to_type.value} wallet",
+        )
+    )
+    db.add(
+        Transaction(
+            user_id=user_id,
+            wallet_id=to_wallet.id,
+            asset_id=asset.id,
+            type=TransactionType.transfer,
+            status=TransactionStatus.completed,
+            amount=delta,
+            delta=delta,
+            ref_id=transfer_ref,
+            note=note or f"Transfer from {from_type.value} wallet",
+        )
+    )
+    await db.flush()
+    await db.refresh(from_wallet)
+    await db.refresh(to_wallet)
+    return to_wallet
+
+
 async def _lock_wallet(db: AsyncSession, wallet_id: str) -> None:
     stmt = select(Wallet.id).where(Wallet.id == wallet_id).with_for_update()
     await db.execute(stmt)
@@ -149,6 +229,7 @@ async def get_balances(db: AsyncSession, user_id: str) -> list[dict]:
     return [
         {
             "asset_symbol": symbol,
+            "wallet_type": w.type.value,
             "balance": _to_dec(w.balance),
             "available": _to_dec(w.available),
             "frozen": _to_dec(w.frozen),

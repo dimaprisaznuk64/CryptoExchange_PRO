@@ -16,6 +16,7 @@ class TransactionType(str, enum.Enum):
     trade_sell = "trade_sell"
     fee = "fee"
     adjustment = "adjustment"
+    transfer = "transfer"
 
 
 class TransactionStatus(str, enum.Enum):

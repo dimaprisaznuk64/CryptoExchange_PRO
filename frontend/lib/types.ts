@@ -75,6 +75,7 @@ export interface Trade {
 
 export interface BalanceItem {
   asset_symbol: string;
+  wallet_type?: string;
   balance: number;
   available: number;
   frozen: number;

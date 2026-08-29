@@ -18,9 +18,13 @@ import { formatDateTime, formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 function WalletPanel() {
-  const [mode, setMode] = useState<"deposit" | "withdraw">("deposit");
+  const [mode, setMode] = useState<"deposit" | "withdraw" | "transfer">(
+    "deposit",
+  );
   const [asset, setAsset] = useState("USD");
   const [amount, setAmount] = useState("");
+  const [fromType, setFromType] = useState<"spot" | "funding">("spot");
+  const [toType, setToType] = useState<"spot" | "funding">("funding");
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -51,11 +55,14 @@ function WalletPanel() {
     setSubmitting(true);
     try {
       if (mode === "deposit") await api.deposit(asset, amt);
-      else await api.withdraw(asset, amt);
+      else if (mode === "withdraw") await api.withdraw(asset, amt);
+      else await api.transfer(asset, amt, fromType, toType);
       setFormSuccess(
         mode === "deposit"
           ? `Deposited ${formatNumber(amt)} ${asset}`
-          : `Withdrew ${formatNumber(amt)} ${asset}`,
+          : mode === "withdraw"
+            ? `Withdrew ${formatNumber(amt)} ${asset}`
+            : `Transferred ${formatNumber(amt)} ${asset} from ${fromType} to ${toType}`,
       );
       setAmount("");
       await refresh();
@@ -78,6 +85,7 @@ function WalletPanel() {
               <thead>
                 <tr className="border-b border-zinc-800 text-xs text-zinc-500">
                   <th className="px-5 py-2 font-medium">Asset</th>
+                  <th className="px-5 py-2 font-medium">Wallet</th>
                   <th className="px-5 py-2 text-right font-medium">Balance</th>
                   <th className="px-5 py-2 text-right font-medium">Available</th>
                   <th className="px-5 py-2 text-right font-medium">Frozen</th>
@@ -86,11 +94,14 @@ function WalletPanel() {
               <tbody>
                 {(balances.data?.items ?? []).map((b) => (
                   <tr
-                    key={b.asset_symbol}
+                    key={`${b.asset_symbol}-${b.wallet_type}`}
                     className="border-b border-zinc-800/60 last:border-0"
                   >
                     <td className="px-5 py-3 font-semibold text-zinc-100">
                       {b.asset_symbol}
+                    </td>
+                    <td className="px-5 py-3 text-xs capitalize text-zinc-400">
+                      {b.wallet_type}
                     </td>
                     <td className="px-5 py-3 text-right font-mono text-zinc-200">
                       {formatNumber(b.balance)}
@@ -106,7 +117,7 @@ function WalletPanel() {
                 {(balances.data?.items ?? []).length === 0 && (
                   <tr>
                     <td
-                      colSpan={4}
+                      colSpan={5}
                       className="px-5 py-8 text-center text-sm text-zinc-500"
                     >
                       No balances.
@@ -151,6 +162,7 @@ function WalletPanel() {
               <option value="">All types</option>
               <option value="deposit">Deposit</option>
               <option value="withdrawal">Withdrawal</option>
+              <option value="transfer">Transfer</option>
               <option value="trade_buy">Trade buy</option>
               <option value="trade_sell">Trade sell</option>
               <option value="fee">Fee</option>
@@ -249,7 +261,7 @@ function WalletPanel() {
           title="Transfer"
           action={
             <div className="flex rounded-lg border border-zinc-700 p-0.5">
-              {(["deposit", "withdraw"] as const).map((m) => (
+              {(["deposit", "withdraw", "transfer"] as const).map((m) => (
                 <button
                   key={m}
                   onClick={() => {
@@ -302,9 +314,30 @@ function WalletPanel() {
             onChange={(e) => setAmount(e.target.value)}
           />
 
+          {mode === "transfer" && (
+            <div className="grid grid-cols-2 gap-3">
+              <Select
+                label="From"
+                value={fromType}
+                onChange={(e) => setFromType(e.target.value as "spot" | "funding")}
+              >
+                <option value="spot">Spot</option>
+                <option value="funding">Funding</option>
+              </Select>
+              <Select
+                label="To"
+                value={toType}
+                onChange={(e) => setToType(e.target.value as "spot" | "funding")}
+              >
+                <option value="spot">Spot</option>
+                <option value="funding">Funding</option>
+              </Select>
+            </div>
+          )}
+
           <Button
             type="submit"
-            variant={mode === "deposit" ? "success" : "danger"}
+            variant={mode === "withdraw" ? "danger" : "success"}
             size="lg"
             loading={submitting}
             className="w-full capitalize"

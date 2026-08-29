@@ -5,7 +5,7 @@
 ## Останнє оновлення
 
 - Дата: 2026-08-29
-- Стан: **Phase 19 (Security: rate-limit на read-ендпоінти) — завершено.**
+- Стан: **Phase 20 (Переказ між гаманцями spot↔funding) — завершено.**
 - Робоча папка: `C:\Users\DIMAS\Desktop\Programming\PythonPRO\CryptoExchange_PRO`
 
 ### Що зроблено в Phase 0:
@@ -223,6 +223,17 @@
 - Live: eager-виконання всіх 3 тасок (refresh {'pairs':4}, cleanup {'removed':0}, cond {'executed':0}); **celery worker запустився**: `Connected to redis://localhost:6380/1` → `celery@Dimas ready`
 - Коміт: див. git log (Phase 16)
 
+### Що зроблено в Phase 20 (Переказ між гаманцями):
+- `app/services/wallet.py` — `transfer(db, user_id, symbol, from_type, to_type, amount)`: атомарно (row-lock обох гаманців) дебетує available джерела → кредитує balance+available цілі; валідація amount>0, from!=to, типи spot/funding, достатність; заборона переказу в той самий тип
+- Леджер: 2 транзакції типу `transfer` (джерело −delta, ціль +delta), зв'язані спільним `ref_id` (`<from_wallet>:<to_wallet>`)
+- `TransactionType` — додано `transfer`; Alembic-міграція `3a9f2c77d1b4` (`ALTER TYPE transactiontype ADD VALUE 'transfer'`) для Postgres
+- `POST /api/v1/wallets/transfer` (rate_limit_user 10/60s), схема `TransferRequest` (Literal spot/funding)
+- `get_balances` тепер повертає `wallet_type` (розрізнення spot/funding у відповіді)
+- Frontend: режим "transfer" у картці гаманців (from/to selects), колонка "Wallet" у таблиці балансів (fix duplicate key), фільтр "transfer" у транзакціях; `api.transfer(...)`
+- Тести: +5 (переказ, леджер 2 записів, недостатність 400, same-wallet 400, bad-type 422) → **78 passed**; frontend lint+build green
+- Live: застосувати міграцію після запуску Docker (`alembic upgrade head`)
+- Коміт: див. git log (Phase 20)
+
 ### Що зроблено в Phase 19 (Security — rate-limit на read-ендпоінти):
 - Публічні (per-IP): `/market/pairs`, `/market/tickers`, `/market/tickers/{symbol}`, `/market/candles` (rate_limit 60–120/60s)
 - Автентифіковані (per-user через `rate_limit_user`): `/portfolio`, `/portfolio/trades`, `/portfolio/history`; `/wallets/balances`, `/wallets/transactions`; `/orders`, `/orders/trades` (30–60/60s)
@@ -259,7 +270,7 @@
 
 ## Наступний крок
 
-- ➡️ Кандидати на Phase 20+: адмін-кабінет, 24h-статистика ринку, звіт за обсягом, переказ між гаманцями (Security покрито повністю)
+- ➡️ Кандидати на Phase 21+: адмін-кабінет, 24h-статистика ринку, звіт за обсягом, сповіщення, деплой (Vercel + Docker)
 - ➡️ Майбутнє (ideas): сповіщення, деплой (Vercel + Docker)
 
 ## Roadmap (фази)
@@ -286,6 +297,7 @@
 | 17 | Security (rate limit, audit, headers) | ✅ (додано) |
 | 18 | Security harden (lockout, per-user rate limit) | ✅ (додано) |
 | 19 | Security: rate-limit на read-ендпоінти | ✅ (додано) |
+| 20 | Переказ між гаманцями (spot↔funding) | ✅ (додано) |
 
 ## Як запустити frontend
 

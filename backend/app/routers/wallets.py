@@ -10,12 +10,14 @@ from app.core.ratelimit import rate_limit_user
 from app.dependencies.auth import get_current_user
 from app.models.user import User
 from app.models.asset import Asset
+from app.models.wallet import WalletType
 from app.models.transaction import TransactionType, TransactionStatus
 from app.schemas.wallet import (
     BalanceItem,
     BalanceResponse,
     DepositRequest,
     WithdrawRequest,
+    TransferRequest,
     TransactionResponse,
 )
 from app.services import wallet as wallet_service
@@ -124,6 +126,29 @@ async def withdraw(
         data.amount,
         tx_type=TransactionType.withdrawal,
         note="Withdrawal (simulated)",
+    )
+    await db.commit()
+    items = await wallet_service.get_balances(db, current_user.id)
+    return BalanceResponse(items=[BalanceItem(**i) for i in items])
+
+
+@router.post(
+    "/transfer",
+    response_model=BalanceResponse,
+    dependencies=[Depends(rate_limit_user("wallets_transfer", limit=10, window=60))],
+)
+async def transfer(
+    data: TransferRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    await wallet_service.transfer(
+        db,
+        current_user.id,
+        data.asset_symbol,
+        WalletType(data.from_type),
+        WalletType(data.to_type),
+        data.amount,
     )
     await db.commit()
     items = await wallet_service.get_balances(db, current_user.id)

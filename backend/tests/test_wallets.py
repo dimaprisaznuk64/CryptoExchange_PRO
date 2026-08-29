@@ -148,3 +148,100 @@ async def test_transactions_filters(client, db_session):
     assert first["delta"] is not None
     # invalid enum -> 422
     assert (await client.get("/api/v1/wallets/transactions", params={"type": "nope"}, headers=headers)).status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_transfer_moves_funds_between_wallets(client, db_session):
+    from app.models.wallet import Wallet, WalletType
+    from sqlalchemy import select
+
+    await _seed_assets(db_session)
+    headers = await _user_and_headers(db_session, "w-tf")
+    # USD in the spot wallet (the deposit default)
+    await client.post("/api/v1/wallets/deposit", json={
+        "asset_symbol": "USD", "amount": 1000,
+    }, headers=headers)
+
+    resp = await client.post("/api/v1/wallets/transfer", json={
+        "asset_symbol": "USD", "amount": 400,
+        "from_type": "spot", "to_type": "funding",
+    }, headers=headers)
+    assert resp.status_code == 200
+
+    res = await db_session.execute(
+        select(Wallet).where(Wallet.user_id == "w-tf", Wallet.asset_id == "a-usd")
+    )
+    wallets = list(res.scalars().all())
+    by_type = {w.type.value: w for w in wallets}
+    assert set(by_type) == {"spot", "funding"}
+    assert float(by_type["spot"].balance) == 600.0
+    assert float(by_type["funding"].balance) == 400.0
+    assert float(by_type["funding"].available) == 400.0
+
+
+@pytest.mark.asyncio
+async def test_transfer_records_ledger(client, db_session):
+    from app.models.transaction import Transaction, TransactionType
+    from sqlalchemy import select
+
+    await _seed_assets(db_session)
+    headers = await _user_and_headers(db_session, "w-tf2")
+    await client.post("/api/v1/wallets/deposit", json={
+        "asset_symbol": "USD", "amount": 500,
+    }, headers=headers)
+
+    await client.post("/api/v1/wallets/transfer", json={
+        "asset_symbol": "USD", "amount": 200,
+        "from_type": "spot", "to_type": "funding",
+    }, headers=headers)
+
+    res = await db_session.execute(
+        select(Transaction).where(Transaction.user_id == "w-tf2")
+    )
+    txs = list(res.scalars().all())
+    transfer_txs = [t for t in txs if t.type == TransactionType.transfer]
+    assert len(transfer_txs) == 2
+    assert {t.delta for t in transfer_txs} == {200, -200}
+    refs = {t.ref_id for t in transfer_txs}
+    assert len(refs) == 1
+
+
+@pytest.mark.asyncio
+async def test_transfer_insufficient_400(client, db_session):
+    await _seed_assets(db_session)
+    headers = await _user_and_headers(db_session, "w-tf3")
+    await client.post("/api/v1/wallets/deposit", json={
+        "asset_symbol": "USD", "amount": 100,
+    }, headers=headers)
+
+    resp = await client.post("/api/v1/wallets/transfer", json={
+        "asset_symbol": "USD", "amount": 500,
+        "from_type": "spot", "to_type": "funding",
+    }, headers=headers)
+    assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_transfer_same_wallet_400(client, db_session):
+    await _seed_assets(db_session)
+    headers = await _user_and_headers(db_session, "w-tf4")
+    await client.post("/api/v1/wallets/deposit", json={
+        "asset_symbol": "USD", "amount": 100,
+    }, headers=headers)
+
+    resp = await client.post("/api/v1/wallets/transfer", json={
+        "asset_symbol": "USD", "amount": 10,
+        "from_type": "spot", "to_type": "spot",
+    }, headers=headers)
+    assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_transfer_bad_wallet_type_422(client, db_session):
+    await _seed_assets(db_session)
+    headers = await _user_and_headers(db_session, "w-tf5")
+    resp = await client.post("/api/v1/wallets/transfer", json={
+        "asset_symbol": "USD", "amount": 10,
+        "from_type": "badtype", "to_type": "funding",
+    }, headers=headers)
+    assert resp.status_code == 422

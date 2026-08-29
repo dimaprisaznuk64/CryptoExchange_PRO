@@ -214,6 +214,17 @@ export const api = {
       auth: true,
       body: { asset_symbol, amount },
     }),
+  transfer: (
+    asset_symbol: string,
+    amount: number,
+    from_type: "spot" | "funding",
+    to_type: "spot" | "funding",
+  ) =>
+    apiFetch<BalanceResponse>("/api/v1/wallets/transfer", {
+      method: "POST",
+      auth: true,
+      body: { asset_symbol, amount, from_type, to_type },
+    }),
   getTransactions: (filter: TransactionFilter = {}) =>
     apiFetch<Transaction[]>(
       `/api/v1/wallets/transactions${buildQuery(filter)}`,
