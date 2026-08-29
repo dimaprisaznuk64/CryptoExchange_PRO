@@ -209,3 +209,47 @@ export interface Notification {
 export interface UnreadCount {
   count: number;
 }
+
+export interface AdminUserListItem {
+  id: string;
+  email: string;
+  username: string;
+  role: string;
+  is_active: boolean;
+  created_at: string;
+  total_usd: number;
+  order_count: number;
+  trade_count: number;
+}
+
+export interface AdminUserList {
+  total: number;
+  users: AdminUserListItem[];
+}
+
+export interface AdminWallet {
+  asset: string;
+  type: string;
+  balance: number;
+  available: number;
+  frozen: number;
+}
+
+export interface AdminUserDetail {
+  id: string;
+  email: string;
+  username: string;
+  role: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  total_usd: number;
+  order_count: number;
+  trade_count: number;
+  wallets: AdminWallet[];
+}
+
+export interface AdminUserUpdate {
+  role?: string;
+  is_active?: boolean;
+}

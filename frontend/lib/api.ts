@@ -1,5 +1,8 @@
 import type {
   AccessTokenResponse,
+  AdminUserDetail,
+  AdminUserList,
+  AdminUserUpdate,
   BalanceResponse,
   Candle,
   MarketStats,
@@ -298,6 +301,19 @@ export const api = {
     apiFetch<UnreadCount>("/api/v1/notifications/read-all", {
       auth: true,
       method: "POST",
+    }),
+  adminListUsers: (params?: { search?: string; limit?: number; offset?: number }) =>
+    apiFetch<AdminUserList>(
+      `/api/v1/admin/users${buildQuery(params ?? {})}`,
+      { auth: true },
+    ),
+  adminGetUser: (id: string) =>
+    apiFetch<AdminUserDetail>(`/api/v1/admin/users/${id}`, { auth: true }),
+  adminUpdateUser: (id: string, body: AdminUserUpdate) =>
+    apiFetch<AdminUserDetail>(`/api/v1/admin/users/${id}`, {
+      auth: true,
+      method: "PATCH",
+      body,
     }),
 };
 

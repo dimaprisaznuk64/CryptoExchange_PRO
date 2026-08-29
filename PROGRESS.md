@@ -5,7 +5,7 @@
 ## Останнє оновлення
 
 - Дата: 2026-08-29
-- Стан: **Phase 24 (Деплой: Docker backend + Vercel frontend) — конфіги + документація готові.**
+- Стан: **Phase 25 (Адмін-кабінет part 1: керування користувачами) — завершено.**
 - Робоча папка: `C:\Users\DIMAS\Desktop\Programming\PythonPRO\CryptoExchange_PRO`
 
 ### Що зроблено в Phase 0:
@@ -223,6 +223,15 @@
 - Live: eager-виконання всіх 3 тасок (refresh {'pairs':4}, cleanup {'removed':0}, cond {'executed':0}); **celery worker запустився**: `Connected to redis://localhost:6380/1` → `celery@Dimas ready`
 - Коміт: див. git log (Phase 16)
 
+### Що зроблено в Phase 25 (Адмін-кабінет part 1: керування користувачами):
+- **Backend**:
+  - `services/admin.py`: `list_users` (batch-агрегація: total USD spot за поточними цінами, # ордерів, # тредів; пошук email/username), `get_user_detail` (профіль + гаманці + підсумки), `update_user` (роль/is_active) із **self-protection** (адмін не може змінити власну роль чи заблокувати себе)
+  - `routers/admin.py`: `GET /admin/users`, `GET /admin/users/{id}`, `PATCH /admin/users/{id}` — захист `require_admin` на рівні роутера + per-user rate_limit; `schemas/admin.py`
+  - Зареєстровано роутер у main.py
+- **Frontend**: сторінка `/admin/users` (role-gate, пошук, таблиця користувачів, детальна панель з гаманцями + block/unblock + зміна ролі), посилання «Admin» у Navbar (видиме тільки адміну); `api.adminListUsers/adminGetUser/adminUpdateUser`, типи `AdminUser*`
+- Тести: +8 (403 не-адмін, 401 без токена, список, пошук, блок→403 у користувача, зміна ролі, self-protection, деталі+404) → **96 passed**; frontend lint+build green
+- Коміт: див. git log (Phase 25)
+
 ### Що зроблено в Phase 24 (Деплой: Docker backend + Vercel frontend):
 - **Backend (Docker)**:
   - `backend/Dockerfile` (python:3.13-slim, requirements, `alembic upgrade head && uvicorn --port 8001`) + `backend/.dockerignore`
@@ -306,7 +315,7 @@
 
 ## Наступний крок
 
-- ➡️ Кандидати на Phase 25+: адмін-кабінет (великий, частинами), фактичний запуск деплою
+- ➡️ Кандидати на Phase 26+: адмін part 2 (ордери/трейди всіх юзерів), адмін part 3 (дашборд/статистика), фактичний запуск деплою
 - ➡️ Майбутнє (ideas): сповіщення, деплой (Vercel + Docker)
 
 ## Roadmap (фази)
@@ -338,6 +347,7 @@
 | 22 | Звіт за обсягом (/portfolio/volume) | ✅ (додано) |
 | 23 | Сповіщення користувача (/notifications + WS) | ✅ (додано) |
 | 24 | Деплой: Docker backend + Vercel frontend | ✅ (конфіги + docs) |
+| 25 | Адмін-кабінет part 1: керування користувачами | ✅ (додано) |
 
 ## Як запустити frontend
 
