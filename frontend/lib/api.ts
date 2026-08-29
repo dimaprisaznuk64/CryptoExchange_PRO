@@ -3,6 +3,7 @@ import type {
   BalanceResponse,
   Candle,
   MarketStats,
+  Notification,
   Order,
   PortfolioHistoryPoint,
   PortfolioResponse,
@@ -12,6 +13,7 @@ import type {
   Trade,
   TradingPair,
   Transaction,
+  UnreadCount,
   User,
   VolumeReport,
 } from "@/lib/types";
@@ -278,6 +280,24 @@ export const api = {
   getVolumeReport: (days = 7) =>
     apiFetch<VolumeReport>(`/api/v1/portfolio/volume?days=${days}`, {
       auth: true,
+    }),
+  getNotifications: (limit = 20) =>
+    apiFetch<Notification[]>(`/api/v1/notifications?limit=${limit}`, {
+      auth: true,
+    }),
+  getUnreadCount: () =>
+    apiFetch<UnreadCount>("/api/v1/notifications/unread-count", {
+      auth: true,
+    }),
+  markNotificationRead: (id: string) =>
+    apiFetch<Notification>(`/api/v1/notifications/${id}/read`, {
+      auth: true,
+      method: "POST",
+    }),
+  markAllNotificationsRead: () =>
+    apiFetch<UnreadCount>("/api/v1/notifications/read-all", {
+      auth: true,
+      method: "POST",
     }),
 };
 

@@ -5,6 +5,7 @@ from app.models.wallet import Wallet, WalletType
 from app.models.transaction import Transaction, TransactionType, TransactionStatus
 from app.models.order import Order, OrderSide, OrderType, OrderStatus
 from app.models.trade import Trade
+from app.models.notification import Notification
 
 __all__ = [
     "User",
@@ -22,4 +23,5 @@ __all__ = [
     "OrderType",
     "OrderStatus",
     "Trade",
+    "Notification",
 ]

@@ -196,3 +196,16 @@ export interface VolumeReport {
   total_trades: number;
   pairs: VolumePairReport[];
 }
+
+export interface Notification {
+  id: string;
+  kind: string;
+  title: string;
+  body: string;
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface UnreadCount {
+  count: number;
+}

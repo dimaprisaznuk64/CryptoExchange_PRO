@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { NotificationsBell } from "@/components/NotificationsBell";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
@@ -62,6 +63,7 @@ export function Navbar() {
                   {user.role}
                 </p>
               </div>
+              <NotificationsBell />
               <button
                 onClick={() => logout()}
                 className="cursor-pointer rounded-lg border border-zinc-700 px-3 py-1.5 text-xs font-medium text-zinc-300 transition-colors hover:bg-zinc-800"

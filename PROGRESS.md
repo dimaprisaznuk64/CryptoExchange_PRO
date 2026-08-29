@@ -5,7 +5,7 @@
 ## Останнє оновлення
 
 - Дата: 2026-08-29
-- Стан: **Phase 22 (Звіт за обсягом) — завершено.**
+- Стан: **Phase 23 (Сповіщення користувача) — завершено.**
 - Робоча папка: `C:\Users\DIMAS\Desktop\Programming\PythonPRO\CryptoExchange_PRO`
 
 ### Що зроблено в Phase 0:
@@ -223,6 +223,17 @@
 - Live: eager-виконання всіх 3 тасок (refresh {'pairs':4}, cleanup {'removed':0}, cond {'executed':0}); **celery worker запустився**: `Connected to redis://localhost:6380/1` → `celery@Dimas ready`
 - Коміт: див. git log (Phase 16)
 
+### Що зроблено в Phase 23 (Сповіщення користувача):
+- **Backend**:
+  - Модель `Notification` (id, user_id FK, kind, title, body, is_read, created_at) + Alembic міграція `f0a1b2c3d4e5_add_notifications` (на live-Postgres застосувати через Docker)
+  - `services/notifications.py`: `create_notification`, `list_notifications`, `mark_read`, `mark_all_read`, `unread_count`
+  - Хуки в `trading.py`: сповіщення `order_filled` (market/limit/TP/SL захоплюються в `_place_market` та `_execute_limit_fill`) та `order_cancelled`
+  - `routers/notifications.py`: `GET /notifications`, `GET /notifications/unread-count`, `POST /notifications/{id}/read`, `POST /notifications/read-all` (all per-user rate_limit)
+  - WS-пуш: `GET /ws/notifications` — періодичний снапшот нових сповіщень + unread-count
+- **Frontend**: `NotificationsBell` у Navbar (бейдж unread, dropdown, mark-all-read, посилання на сторінку), сторінка `/notifications` (список + індивідуальне mark-read + mark-all); `api.getNotifications/getUnreadCount/markNotificationRead/markAllNotificationsRead`, типи `Notification`/`UnreadCount`
+- Тести: +4 (spовiщення про fill/cancel, unread+mark-read, 401) → **88 passed**; frontend lint+build green
+- Коміт: див. git log (Phase 23)
+
 ### Що зроблено в Phase 22 (Звіт за обсягом):
 - `portfolio.get_volume_report(db, user_id, days)` — GROUP BY-агрегація тредів користувача за період по парах (buy/sell notional, qty, count) + загальні підсумки (total_notional/qty/trades)
 - `GET /api/v1/portfolio/volume?days=N` (1–90, дефолт 7) → `VolumeReport` (per-user rate_limit 30/60s, 401 без авторизації)
@@ -284,7 +295,7 @@
 
 ## Наступний крок
 
-- ➡️ Кандидати на Phase 23+: адмін-кабінет, сповіщення користувача, деплой (Vercel + Docker)
+- ➡️ Кандидати на Phase 24+: адмін-кабінет, деплой (Vercel + Docker)
 - ➡️ Майбутнє (ideas): сповіщення, деплой (Vercel + Docker)
 
 ## Roadmap (фази)
@@ -314,6 +325,7 @@
 | 20 | Переказ між гаманцями (spot↔funding) | ✅ (додано) |
 | 21 | 24h-статистика ринку (/market/stats) | ✅ (додано) |
 | 22 | Звіт за обсягом (/portfolio/volume) | ✅ (додано) |
+| 23 | Сповіщення користувача (/notifications + WS) | ✅ (додано) |
 
 ## Як запустити frontend
 

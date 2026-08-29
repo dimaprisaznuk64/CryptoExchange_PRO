@@ -10,6 +10,7 @@ from app.core.security import decode_token, is_token_blacklisted
 from app.models.user import User
 from app.services.market import _live_price
 from app.services.depth import order_book
+from app.services.notifications import list_notifications, unread_count
 
 logger = logging.getLogger(__name__)
 
@@ -70,3 +71,42 @@ async def ws_prices(websocket: WebSocket):
                     await websocket.send_json({"type": "book", **book})
     except WebSocketDisconnect:
         logger.info("WS disconnected for %s", user.id)
+
+
+@router.websocket("/ws/notifications")
+async def ws_notifications(websocket: WebSocket):
+    await websocket.accept()
+
+    user = await authenticate_ws(websocket)
+    if user is None:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
+    sent_ids: set[str] = set()
+    await websocket.send_json({"type": "notification_init"})
+    try:
+        while True:
+            async with async_session() as db:
+                items = await list_notifications(db, user.id, limit=30)
+                count = await unread_count(db, user.id)
+            for n in items:
+                if n.id in sent_ids:
+                    continue
+                sent_ids.add(n.id)
+                await websocket.send_json(
+                    {
+                        "type": "notification",
+                        "notification": {
+                            "id": n.id,
+                            "kind": n.kind,
+                            "title": n.title,
+                            "body": n.body,
+                            "is_read": n.is_read,
+                            "created_at": n.created_at.isoformat(),
+                        },
+                    }
+                )
+            await websocket.send_json({"type": "unread_count", "count": count})
+            await asyncio.sleep(2)
+    except WebSocketDisconnect:
+        logger.info("WS notifications disconnected for %s", user.id)

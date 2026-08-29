@@ -17,7 +17,7 @@ from app.core.logging import setup_logging
 from app.core.cache import init_redis, close_redis
 from app.core.database import async_session
 from app.core.ratelimit import AccountLocked, RateLimitExceeded
-from app.routers import health, auth, wallets, market, orders, portfolio, ws
+from app.routers import health, auth, wallets, market, orders, portfolio, notifications, ws
 from app.services import trading as trading_service
 
 settings = get_settings()
@@ -123,6 +123,7 @@ app.include_router(wallets.router, prefix=settings.API_V1_PREFIX)
 app.include_router(market.router, prefix=settings.API_V1_PREFIX)
 app.include_router(orders.router, prefix=settings.API_V1_PREFIX)
 app.include_router(portfolio.router, prefix=settings.API_V1_PREFIX)
+app.include_router(notifications.router, prefix=settings.API_V1_PREFIX)
 app.include_router(ws.router)
 
 

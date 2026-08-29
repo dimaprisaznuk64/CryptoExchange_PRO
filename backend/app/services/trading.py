@@ -14,9 +14,32 @@ from app.models.order import Order, OrderSide, OrderType, OrderStatus
 from app.models.trade import Trade
 from app.models.transaction import Transaction, TransactionType, TransactionStatus
 from app.services import wallet as wallet_service
+from app.services import notifications as notifications_service
 from app.services.market import _current_price, _live_price
 
 logger = logging.getLogger(__name__)
+
+
+async def _notify_order_filled(db: AsyncSession, order: Order, pair: TradingPair) -> None:
+    side = order.side.value
+    label = order.type.value
+    await notifications_service.create_notification(
+        db,
+        order.user_id,
+        kind="order_filled",
+        title=f"{label.capitalize()} {side} filled",
+        body=f"{pair.symbol} @ {order.avg_fill_price}",
+    )
+
+
+async def _notify_order_cancelled(db: AsyncSession, order: Order, pair: TradingPair) -> None:
+    await notifications_service.create_notification(
+        db,
+        order.user_id,
+        kind="order_cancelled",
+        title=f"{order.side.value.capitalize()} order cancelled",
+        body=f"{pair.symbol} @ {order.price}",
+    )
 
 
 def _to_dec(value) -> Decimal:
@@ -138,6 +161,7 @@ async def _execute_limit_fill(db, order: Order, pair: TradingPair) -> None:
             notional=notional,
         )
     )
+    await _notify_order_filled(db, order, pair)
 
 
 async def _sweep_open_orders(db: AsyncSession, user_id: str) -> list[Order]:
@@ -339,6 +363,8 @@ async def _place_market(
         )
     )
     await db.flush()
+    await _notify_order_filled(db, order, pair)
+    await db.flush()
     return order
 
 
@@ -363,6 +389,7 @@ async def cancel_order(db: AsyncSession, user_id: str, order_id: str) -> Order:
         order.side, _to_dec(order.qty), _to_dec(order.price),
     )
     order.status = OrderStatus.cancelled
+    await _notify_order_cancelled(db, order, pair)
     await db.flush()
     return order
 
