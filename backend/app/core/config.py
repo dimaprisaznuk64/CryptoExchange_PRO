@@ -61,6 +61,10 @@ class Settings(BaseSettings):
                 UserWarning,
                 stacklevel=2,
             )
+        if v.startswith(("postgres://", "postgresql://")) and "+asyncpg" not in v.split("://")[0]:
+            v = v.replace("postgresql://", "postgresql+asyncpg://", 1) or v.replace(
+                "postgres://", "postgresql+asyncpg://", 1
+            )
         return v
 
     @property
