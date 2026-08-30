@@ -32,10 +32,17 @@ export function useRealtimePrices(pairs: string[]) {
     const url = getWsUrl(pairs);
     let ws: WebSocket | null = null;
     let closed = false;
+    let connectAttempts = 0;
+    const MAX_RECONNECTS = 5;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
     const connect = () => {
       if (closed) return;
+      connectAttempts += 1;
+      if (connectAttempts > MAX_RECONNECTS) {
+        setState((s) => ({ ...s, connected: false }));
+        return;
+      }
       ws = new WebSocket(url);
 
       ws.onopen = () => {
@@ -71,16 +78,21 @@ export function useRealtimePrices(pairs: string[]) {
 
       ws.onclose = () => {
         setState((s) => ({ ...s, connected: false }));
-        if (!closed && !reconnectTimer) {
+        if (!closed && !reconnectTimer && connectAttempts < MAX_RECONNECTS) {
+          const delay = Math.min(1000 * 2 ** (connectAttempts - 1), 15000);
           reconnectTimer = setTimeout(() => {
             reconnectTimer = null;
             setReconnect((r) => r + 1);
-          }, 2000);
+          }, delay);
         }
       };
 
       ws.onerror = () => {
-        ws?.close();
+        try {
+          ws?.close();
+        } catch {
+          /* ignore */
+        }
       };
     };
 
