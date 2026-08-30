@@ -7,6 +7,19 @@ from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+def _normalize_asyncpg_tls(url: str) -> str:
+    """Convert Postgres query params asyncpg can't take into ones it can.
+
+    asyncpg uses `ssl=require` rather than `sslmode=require` (and errors on
+    `sslmode`). If the URL carries `sslmode=require`, translate it so the
+    connection can be established over TLS.
+    """
+    if "?sslmode=require" in url and "ssl=" not in url.split("?")[-1]:
+        url = url.replace("?sslmode=require", "?ssl=require", 1)
+        url = url.replace("&sslmode=require", "&ssl=require", 1)
+    return url
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
@@ -65,6 +78,7 @@ class Settings(BaseSettings):
             v = v.replace("postgresql://", "postgresql+asyncpg://", 1) or v.replace(
                 "postgres://", "postgresql+asyncpg://", 1
             )
+        v = _normalize_asyncpg_tls(v)
         return v
 
     @property
