@@ -51,7 +51,7 @@ function NotificationsPanel() {
           <button
             onClick={markAll}
             disabled={busy}
-            className="mr-4 cursor-pointer rounded-lg border border-zinc-700 px-3 py-1.5 text-xs font-medium text-zinc-300 transition-colors hover:bg-zinc-800 disabled:opacity-50"
+            className="mr-4 cursor-pointer rounded-[2px] border border-hairline px-3 py-1.5 text-xs font-medium text-ink/80 transition-colors hover:bg-surface-2 disabled:opacity-50"
           >
             Mark all read
           </button>
@@ -59,9 +59,9 @@ function NotificationsPanel() {
       </div>
       <div className="max-h-[70vh] overflow-y-auto">
         {loading ? (
-          <p className="px-5 py-8 text-center text-sm text-zinc-500">Loading…</p>
+          <p className="px-5 py-8 text-center text-sm text-ink/50">Loading…</p>
         ) : items.length === 0 ? (
-          <p className="px-5 py-8 text-center text-sm text-zinc-500">
+          <p className="px-5 py-8 text-center text-sm text-ink/50">
             No notifications yet.
           </p>
         ) : (
@@ -69,23 +69,23 @@ function NotificationsPanel() {
             <div
               key={n.id}
               className={cn(
-                "flex items-start justify-between gap-3 border-b border-zinc-800/60 px-5 py-3 last:border-0",
-                !n.is_read && "bg-zinc-800/40",
+                "flex items-start justify-between gap-3 border-b border-hairline/60 px-5 py-3 last:border-0",
+                !n.is_read && "bg-surface-2/40",
               )}
             >
               <div>
                 <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium text-zinc-100">{n.title}</p>
+                  <p className="text-sm font-medium text-ink">{n.title}</p>
                   {!n.is_read && (
-                    <span className="rounded bg-rose-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-rose-400">
+                    <span className="rounded bg-bear/15 px-1.5 py-0.5 text-[10px] font-semibold text-bear">
                       new
                     </span>
                   )}
                 </div>
                 {n.body && (
-                  <p className="mt-0.5 text-xs text-zinc-500">{n.body}</p>
+                  <p className="mt-0.5 text-xs text-ink/50">{n.body}</p>
                 )}
-                <p className="mt-1 text-[11px] text-zinc-600">
+                <p className="mt-1 text-[11px] text-ink/40">
                   {formatDateTime(n.created_at)}
                 </p>
               </div>
@@ -93,7 +93,7 @@ function NotificationsPanel() {
                 <button
                   onClick={() => markRead(n.id)}
                   disabled={busy}
-                  className="mt-0.5 shrink-0 cursor-pointer rounded-md border border-zinc-700 px-2 py-1 text-[11px] font-medium text-zinc-300 transition-colors hover:bg-zinc-800 disabled:opacity-50"
+                  className="mt-0.5 shrink-0 cursor-pointer rounded-[2px] border border-hairline px-2 py-1 text-[11px] font-medium text-ink/80 transition-colors hover:bg-surface-2 disabled:opacity-50"
                 >
                   Mark read
                 </button>
@@ -112,8 +112,8 @@ export default function NotificationsPage() {
     <Protected>
       <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-zinc-50">Notifications</h1>
-          <p className="text-sm text-zinc-400">
+          <h1 className="text-2xl font-bold text-ink">Notifications</h1>
+          <p className="text-sm text-ink/60">
             Activity on your orders, for {user?.username}.
           </p>
         </div>

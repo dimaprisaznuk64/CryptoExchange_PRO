@@ -22,11 +22,11 @@ function Stat({
 }) {
   return (
     <Card className="p-5">
-      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+      <p className="text-xs font-medium uppercase tracking-wide text-ink/50">
         {label}
       </p>
-      <p className="mt-2 text-2xl font-extrabold text-zinc-50">{value}</p>
-      {hint && <p className="mt-1 text-xs text-zinc-500">{hint}</p>}
+      <p className="mt-2 text-2xl font-extrabold text-ink">{value}</p>
+      {hint && <p className="mt-1 text-xs text-ink/50">{hint}</p>}
     </Card>
   );
 }
@@ -58,7 +58,7 @@ function VolumeChart({ data }: { data: AdminStats["volume_timeline"] }) {
 
   if (data.length === 0) {
     return (
-      <p className="px-6 py-10 text-center text-sm text-zinc-500">
+      <p className="px-6 py-10 text-center text-sm text-ink/50">
         No volume in the selected period yet.
       </p>
     );
@@ -73,8 +73,8 @@ function VolumeChart({ data }: { data: AdminStats["volume_timeline"] }) {
     >
       <defs>
         <linearGradient id="admin-volume-fill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#818cf8" stopOpacity="0.18" />
-          <stop offset="100%" stopColor="#818cf8" stopOpacity="0" />
+          <stop offset="0%" stopColor="#ffae00" stopOpacity="0.18" />
+          <stop offset="100%" stopColor="#ffae00" stopOpacity="0" />
         </linearGradient>
       </defs>
 
@@ -87,7 +87,7 @@ function VolumeChart({ data }: { data: AdminStats["volume_timeline"] }) {
             x2={W - PAD}
             y1={y}
             y2={y}
-            stroke="#27272a"
+            stroke="#2a2a2e"
             strokeDasharray="3 6"
             strokeWidth="1"
           />
@@ -98,7 +98,7 @@ function VolumeChart({ data }: { data: AdminStats["volume_timeline"] }) {
       <polyline
         points={line}
         fill="none"
-        stroke="#818cf8"
+        stroke="#ffae00"
         strokeWidth="2"
         strokeLinejoin="round"
         strokeLinecap="round"
@@ -125,17 +125,17 @@ function Dashboard({ currentUser }: { currentUser: { id: string; role: string } 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-zinc-50">Admin · Dashboard</h1>
+        <h1 className="text-2xl font-bold text-ink">Admin · Dashboard</h1>
         <div className="flex items-center gap-1">
           {RANGES.map((r) => (
             <button
               key={r}
               onClick={() => setDays(r)}
               className={cn(
-                "cursor-pointer rounded-md px-3 py-1 text-xs font-medium transition-colors",
+                "cursor-pointer rounded-[2px] px-3 py-1 text-xs font-medium transition-colors",
                 days === r
-                  ? "bg-indigo-600 text-white"
-                  : "text-zinc-400 hover:text-zinc-200",
+                  ? "bg-amber text-bg"
+                  : "text-ink/60 hover:text-ink",
               )}
             >
               {r}d
@@ -145,7 +145,7 @@ function Dashboard({ currentUser }: { currentUser: { id: string; role: string } 
       </div>
 
       {loading && !data ? (
-        <p className="text-sm text-zinc-500">Loading…</p>
+        <p className="text-sm text-ink/50">Loading…</p>
       ) : t ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Stat
@@ -193,7 +193,7 @@ function Dashboard({ currentUser }: { currentUser: { id: string; role: string } 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-zinc-800 text-xs text-zinc-500">
+              <tr className="border-b border-hairline text-xs text-ink/50">
                 <th className="px-5 py-2 font-medium">Pair</th>
                 <th className="px-5 py-2 font-medium">Trades</th>
                 <th className="px-5 py-2 text-right font-medium">Buy volume</th>
@@ -205,21 +205,21 @@ function Dashboard({ currentUser }: { currentUser: { id: string; role: string } 
               {pairs.map((p) => (
                 <tr
                   key={p.pair}
-                  className="border-b border-zinc-800/60 last:border-0"
+                  className="border-b border-hairline/60 last:border-0"
                 >
-                  <td className="px-5 py-2.5 font-semibold text-zinc-100">
+                  <td className="px-5 py-2.5 font-semibold text-ink">
                     {p.pair}
                   </td>
-                  <td className="px-5 py-2.5 font-mono text-zinc-300">
+                  <td className="px-5 py-2.5 font-mono text-ink/80">
                     {p.trades}
                   </td>
-                  <td className="px-5 py-2.5 text-right font-mono text-emerald-400">
+                  <td className="px-5 py-2.5 text-right font-mono text-bull">
                     {formatUsd(p.buy_notional)}
                   </td>
-                  <td className="px-5 py-2.5 text-right font-mono text-rose-400">
+                  <td className="px-5 py-2.5 text-right font-mono text-bear">
                     {formatUsd(p.sell_notional)}
                   </td>
-                  <td className="px-5 py-2.5 text-right font-mono text-zinc-100">
+                  <td className="px-5 py-2.5 text-right font-mono text-ink">
                     {formatUsd(p.volume_notional)}
                   </td>
                 </tr>
@@ -228,7 +228,7 @@ function Dashboard({ currentUser }: { currentUser: { id: string; role: string } 
                 <tr>
                   <td
                     colSpan={5}
-                    className="px-5 py-8 text-center text-sm text-zinc-500"
+                    className="px-5 py-8 text-center text-sm text-ink/50"
                   >
                     No volume in the selected period yet.
                   </td>
@@ -242,7 +242,7 @@ function Dashboard({ currentUser }: { currentUser: { id: string; role: string } 
       <div className="flex justify-end">
         <button
           onClick={() => refetch()}
-          className="cursor-pointer rounded-lg border border-zinc-700 px-3 py-1.5 text-xs font-medium text-zinc-300 transition-colors hover:bg-zinc-800"
+          className="cursor-pointer rounded-[2px] border border-hairline px-3 py-1.5 text-xs font-medium text-ink/80 transition-colors hover:bg-surface-2"
         >
           Refresh
         </button>
@@ -258,8 +258,8 @@ export default function AdminDashboardPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-zinc-50">Admin</h1>
-        <p className="text-sm text-zinc-400">
+        <h1 className="text-2xl font-bold text-ink">Admin</h1>
+        <p className="text-sm text-ink/60">
           Platform overview: users, activity and traded volume.
         </p>
       </div>

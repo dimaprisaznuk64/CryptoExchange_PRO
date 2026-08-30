@@ -15,18 +15,18 @@ export function VolumeReportPanel() {
 
   return (
     <Card>
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-zinc-800 px-5 py-4">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-hairline px-5 py-4">
         <div>
-          <h2 className="text-sm font-semibold tracking-wide text-zinc-100">
+          <h2 className="text-sm font-semibold tracking-wide text-ink">
             Volume report
           </h2>
-          <p className="mt-0.5 text-xs text-zinc-500">
+          <p className="mt-0.5 text-xs text-ink/50">
             Traded volume by pair over the selected period
           </p>
         </div>
         {!loading && data && (
-          <div className="text-right text-sm text-zinc-400">
-            <span className="font-mono text-base font-semibold text-zinc-100">
+          <div className="text-right text-sm text-ink/60">
+            <span className="font-mono text-base font-semibold text-ink">
               {formatUsd(data.total_notional)}
             </span>{" "}
             total · {data.total_trades} trades
@@ -40,10 +40,10 @@ export function VolumeReportPanel() {
             key={r}
             onClick={() => setDays(r)}
             className={cn(
-              "cursor-pointer rounded-md px-3 py-1 text-xs font-medium transition-colors",
+              "cursor-pointer rounded-[2px] px-3 py-1 text-xs font-medium transition-colors",
               days === r
-                ? "bg-indigo-600 text-white"
-                : "text-zinc-400 hover:text-zinc-200",
+                ? "bg-amber text-bg"
+                : "text-ink/60 hover:text-ink",
             )}
           >
             {r}d
@@ -54,7 +54,7 @@ export function VolumeReportPanel() {
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead>
-            <tr className="border-b border-zinc-800 text-xs text-zinc-500">
+            <tr className="border-b border-hairline text-xs text-ink/50">
               <th className="px-5 py-2 font-medium">Pair</th>
               <th className="px-5 py-2 font-medium">Trades</th>
               <th className="px-5 py-2 text-right font-medium">Buy volume</th>
@@ -66,21 +66,21 @@ export function VolumeReportPanel() {
             {(data?.pairs ?? []).map((p) => (
               <tr
                 key={p.pair}
-                className="border-b border-zinc-800/60 last:border-0"
+                className="border-b border-hairline/60 last:border-0"
               >
-                <td className="px-5 py-2.5 font-semibold text-zinc-100">
+                <td className="px-5 py-2.5 font-semibold text-ink">
                   {p.pair}
                 </td>
-                <td className="px-5 py-2.5 font-mono text-zinc-300">
+                <td className="px-5 py-2.5 font-mono text-ink/80">
                   {p.trades}
                 </td>
-                <td className="px-5 py-2.5 text-right font-mono text-emerald-400">
+                <td className="px-5 py-2.5 text-right font-mono text-bull">
                   {formatUsd(p.buy_notional)}
                 </td>
-                <td className="px-5 py-2.5 text-right font-mono text-rose-400">
+                <td className="px-5 py-2.5 text-right font-mono text-bear">
                   {formatUsd(p.sell_notional)}
                 </td>
-                <td className="px-5 py-2.5 text-right font-mono text-zinc-100">
+                <td className="px-5 py-2.5 text-right font-mono text-ink">
                   {formatUsd(p.volume_notional)}
                 </td>
               </tr>
@@ -89,7 +89,7 @@ export function VolumeReportPanel() {
               <tr>
                 <td
                   colSpan={5}
-                  className="px-5 py-8 text-center text-sm text-zinc-500"
+                  className="px-5 py-8 text-center text-sm text-ink/50"
                 >
                   No volume in the selected period yet.
                 </td>

@@ -47,20 +47,20 @@ function DetailPanel({
             )}
           </div>
           <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-            <dt className="text-zinc-500">Total USD</dt>
-            <dd className="text-right font-mono text-zinc-100">
+            <dt className="text-ink/50">Total USD</dt>
+            <dd className="text-right font-mono text-ink">
               {formatUsd(detail.total_usd)}
             </dd>
-            <dt className="text-zinc-500">Orders</dt>
-            <dd className="text-right font-mono text-zinc-100">
+            <dt className="text-ink/50">Orders</dt>
+            <dd className="text-right font-mono text-ink">
               {detail.order_count}
             </dd>
-            <dt className="text-zinc-500">Trades</dt>
-            <dd className="text-right font-mono text-zinc-100">
+            <dt className="text-ink/50">Trades</dt>
+            <dd className="text-right font-mono text-ink">
               {detail.trade_count}
             </dd>
-            <dt className="text-zinc-500">Registered</dt>
-            <dd className="text-right font-mono text-zinc-100">
+            <dt className="text-ink/50">Registered</dt>
+            <dd className="text-right font-mono text-ink">
               {formatDateTime(detail.created_at)}
             </dd>
           </dl>
@@ -112,17 +112,17 @@ function DetailPanel({
             </Button>
           </div>
           {isSelf && (
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-ink/50">
               You cannot change your own role or block yourself.
             </p>
           )}
         </div>
       </div>
 
-      <div className="overflow-x-auto border-t border-zinc-800">
+      <div className="overflow-x-auto border-t border-hairline">
         <table className="w-full text-left text-sm">
           <thead>
-            <tr className="border-b border-zinc-800 text-xs text-zinc-500">
+            <tr className="border-b border-hairline text-xs text-ink/50">
               <th className="px-5 py-2 font-medium">Asset</th>
               <th className="px-5 py-2 font-medium">Type</th>
               <th className="px-5 py-2 text-right font-medium">Balance</th>
@@ -132,23 +132,23 @@ function DetailPanel({
           </thead>
           <tbody>
             {detail.wallets.map((w) => (
-              <tr key={`${w.asset}-${w.type}`} className="border-b border-zinc-800/60 last:border-0">
-                <td className="px-5 py-2.5 font-semibold text-zinc-100">{w.asset}</td>
-                <td className="px-5 py-2.5 text-zinc-300">{w.type}</td>
-                <td className="px-5 py-2.5 text-right font-mono text-zinc-200">
+              <tr key={`${w.asset}-${w.type}`} className="border-b border-hairline/60 last:border-0">
+                <td className="px-5 py-2.5 font-semibold text-ink">{w.asset}</td>
+                <td className="px-5 py-2.5 text-ink/80">{w.type}</td>
+                <td className="px-5 py-2.5 text-right font-mono text-ink/90">
                   {w.balance}
                 </td>
-                <td className="px-5 py-2.5 text-right font-mono text-zinc-300">
+                <td className="px-5 py-2.5 text-right font-mono text-ink/80">
                   {w.available}
                 </td>
-                <td className="px-5 py-2.5 text-right font-mono text-zinc-300">
+                <td className="px-5 py-2.5 text-right font-mono text-ink/80">
                   {w.frozen}
                 </td>
               </tr>
             ))}
             {detail.wallets.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-5 py-6 text-center text-sm text-zinc-500">
+                <td colSpan={5} className="px-5 py-6 text-center text-sm text-ink/50">
                   No wallets yet.
                 </td>
               </tr>
@@ -201,7 +201,7 @@ function UsersManager({ currentUser }: { currentUser: { id: string; role: string
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-zinc-800 text-xs text-zinc-500">
+              <tr className="border-b border-hairline text-xs text-ink/50">
                 <th className="px-5 py-2 font-medium">User</th>
                 <th className="px-5 py-2 font-medium">Role</th>
                 <th className="px-5 py-2 font-medium">Status</th>
@@ -215,13 +215,13 @@ function UsersManager({ currentUser }: { currentUser: { id: string; role: string
                   key={u.id}
                   onClick={() => setSelectedId(u.id)}
                   className={cn(
-                    "cursor-pointer border-b border-zinc-800/60 transition-colors last:border-0 hover:bg-zinc-800/40",
-                    selectedId === u.id && "bg-zinc-800/50",
+                    "cursor-pointer border-b border-hairline/60 transition-colors last:border-0 hover:bg-surface-2/40",
+                    selectedId === u.id && "bg-surface-2/50",
                   )}
                 >
                   <td className="px-5 py-2.5">
-                    <p className="font-medium text-zinc-100">{u.username}</p>
-                    <p className="text-xs text-zinc-500">{u.email}</p>
+                    <p className="font-medium text-ink">{u.username}</p>
+                    <p className="text-xs text-ink/50">{u.email}</p>
                   </td>
                   <td className="px-5 py-2.5">
                     <Badge tone={roleTone(u.role)}>{u.role}</Badge>
@@ -233,17 +233,17 @@ function UsersManager({ currentUser }: { currentUser: { id: string; role: string
                       <Badge tone="red">blocked</Badge>
                     )}
                   </td>
-                  <td className="px-5 py-2.5 text-right font-mono text-zinc-200">
+                  <td className="px-5 py-2.5 text-right font-mono text-ink/90">
                     {formatUsd(u.total_usd)}
                   </td>
-                  <td className="px-5 py-2.5 text-right font-mono text-zinc-300">
+                  <td className="px-5 py-2.5 text-right font-mono text-ink/80">
                     {u.trade_count}
                   </td>
                 </tr>
               ))}
               {list.data && list.data.users.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-5 py-8 text-center text-sm text-zinc-500">
+                  <td colSpan={5} className="px-5 py-8 text-center text-sm text-ink/50">
                     No users found.
                   </td>
                 </tr>
@@ -267,8 +267,8 @@ export default function AdminUsersPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-zinc-50">Admin · Users</h1>
-        <p className="text-sm text-zinc-400">
+        <h1 className="text-2xl font-bold text-ink">Admin · Users</h1>
+        <p className="text-sm text-ink/60">
           Manage accounts: view balances, block/unblock, and change roles.
         </p>
       </div>

@@ -49,7 +49,7 @@ export const CandleChart = memo(function CandleChart({ candles, height = 320 }: 
   if (candles.length === 0) {
     return (
       <div
-        className="flex items-center justify-center text-sm text-zinc-500"
+        className="flex items-center justify-center text-sm text-ink/50"
         style={{ height }}
       >
         No data
@@ -66,12 +66,12 @@ export const CandleChart = memo(function CandleChart({ candles, height = 320 }: 
       <div className="mb-2 flex items-baseline justify-between">
         <span
           className={`text-lg font-semibold ${
-            lastUp ? "text-emerald-400" : "text-rose-400"
+            lastUp ? "text-bull" : "text-bear"
           }`}
         >
           {formatPrice(last.candle.close)}
         </span>
-        <div className="flex gap-1 text-[10px] font-medium text-zinc-500">
+        <div className="flex gap-1 text-[10px] font-medium text-ink/50">
           <span>
             O {formatPrice(last.candle.open)}
           </span>
@@ -96,11 +96,11 @@ export const CandleChart = memo(function CandleChart({ candles, height = 320 }: 
       >
         <defs>
           <linearGradient id="grid" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#27272a" stopOpacity="1" />
-            <stop offset="100%" stopColor="#18181b" stopOpacity="1" />
+            <stop offset="0%" stopColor="#1a1a1d" stopOpacity="1" />
+            <stop offset="100%" stopColor="#141416" stopOpacity="1" />
           </linearGradient>
         </defs>
-        <rect x="0" y="0" width={width} height={height} fill="url(#grid)" rx="8" />
+        <rect x="0" y="0" width={width} height={height} fill="url(#grid)" rx="2" />
 
         {[0.25, 0.5, 0.75].map((f) => (
           <line
@@ -109,7 +109,7 @@ export const CandleChart = memo(function CandleChart({ candles, height = 320 }: 
             x2={width}
             y1={height * f}
             y2={height * f}
-            stroke="#27272a"
+            stroke="#2a2a2e"
             strokeWidth="1"
           />
         ))}
@@ -121,7 +121,7 @@ export const CandleChart = memo(function CandleChart({ candles, height = 320 }: 
               x2={p.x}
               y1={p.highY}
               y2={p.lowY}
-              stroke={p.up ? "#10b981" : "#f43f5e"}
+              stroke={p.up ? "#17c979" : "#ff4d4d"}
               strokeWidth="1"
             />
             <rect
@@ -129,7 +129,7 @@ export const CandleChart = memo(function CandleChart({ candles, height = 320 }: 
               y={Math.min(p.openY, p.closeY)}
               width={bodyW}
               height={Math.max(Math.abs(p.openY - p.closeY), 1)}
-              fill={p.up ? "#10b981" : "#f43f5e"}
+              fill={p.up ? "#17c979" : "#ff4d4d"}
               rx="1"
             />
           </g>
@@ -143,7 +143,7 @@ export const CandleChart = memo(function CandleChart({ candles, height = 320 }: 
                 x2={width}
                 y1={hovered.closeY}
                 y2={hovered.closeY}
-                stroke={hovered.up ? "#10b981" : "#f43f5e"}
+                stroke={hovered.up ? "#17c979" : "#ff4d4d"}
                 strokeWidth="1"
                 strokeDasharray="4 4"
                 opacity="0.6"
@@ -171,9 +171,9 @@ export const CandleChart = memo(function CandleChart({ candles, height = 320 }: 
               y="6"
               width="90"
               height="58"
-              rx="6"
-              fill="#18181b"
-              stroke="#3f3f46"
+              rx="2"
+              fill="#1a1a1d"
+              stroke="#3a3a3f"
             />
             <text x={hovered.x + 4} y="20" fill="#a1a1aa" fontSize="10">
               {new Date(hovered.candle.time).toLocaleString("en-US", {
@@ -186,7 +186,7 @@ export const CandleChart = memo(function CandleChart({ candles, height = 320 }: 
             <text
               x={hovered.x + 4}
               y="34"
-              fill={hovered.up ? "#10b981" : "#f43f5e"}
+              fill={hovered.up ? "#17c979" : "#ff4d4d"}
               fontSize="10"
             >
               O {hovered.candle.open.toFixed(2)}
@@ -194,7 +194,7 @@ export const CandleChart = memo(function CandleChart({ candles, height = 320 }: 
             <text
               x={hovered.x + 4}
               y="47"
-              fill={hovered.up ? "#10b981" : "#f43f5e"}
+              fill={hovered.up ? "#17c979" : "#ff4d4d"}
               fontSize="10"
             >
               H {hovered.candle.high.toFixed(2)}
@@ -202,7 +202,7 @@ export const CandleChart = memo(function CandleChart({ candles, height = 320 }: 
             <text
               x={hovered.x + 4}
               y="60"
-              fill={hovered.up ? "#10b981" : "#f43f5e"}
+              fill={hovered.up ? "#17c979" : "#ff4d4d"}
               fontSize="10"
             >
               L {hovered.candle.low.toFixed(2)}

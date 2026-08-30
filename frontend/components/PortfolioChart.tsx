@@ -42,11 +42,11 @@ export function PortfolioChart({ data }: { data: Point[] }) {
   const diff = last - first;
   const pct = first > 0 ? (diff / first) * 100 : 0;
   const up = diff >= 0;
-  const color = up ? "#34d399" : "#fb7185";
+  const color = up ? "#17c979" : "#ff4d4d";
 
   if (data.length === 0) {
     return (
-      <p className="px-6 py-10 text-center text-sm text-zinc-500">
+      <p className="px-6 py-10 text-center text-sm text-ink/50">
         No portfolio history yet.
       </p>
     );
@@ -56,17 +56,17 @@ export function PortfolioChart({ data }: { data: Point[] }) {
     <div>
       <div className="flex items-end justify-between px-6 pt-2">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+          <p className="text-xs font-medium uppercase tracking-wide text-ink/50">
             Value now
           </p>
-          <p className="mt-1 text-2xl font-extrabold text-zinc-50">
+          <p className="mt-1 text-2xl font-extrabold text-ink">
             {formatUsd(last)}
           </p>
         </div>
         <p
           className={cn(
             "pb-1 text-sm font-bold",
-            up ? "text-emerald-400" : "text-rose-400",
+            up ? "text-bull" : "text-bear",
           )}
         >
           {formatUsd(diff)} ({formatPercent(pct)})
@@ -95,7 +95,7 @@ export function PortfolioChart({ data }: { data: Point[] }) {
               x2={W - PAD}
               y1={y}
               y2={y}
-              stroke="#27272a"
+              stroke="#2a2a2e"
               strokeDasharray="3 6"
               strokeWidth="1"
             />

@@ -18,19 +18,27 @@ export function Navbar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  const navLink = (active: boolean) =>
+    cn(
+      "rounded-[2px] px-3 py-1.5 text-sm font-medium transition-colors",
+      active
+        ? "bg-surface-2 text-ink"
+        : "text-ink/60 hover:text-ink",
+    );
+
   return (
-    <header className="sticky top-0 z-40 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-hairline bg-bg/80 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6">
         <div className="flex items-center gap-8">
           <Link
             href="/"
-            className="flex items-center gap-2 text-base font-bold tracking-tight text-zinc-50"
+            className="flex items-center gap-2 text-base font-bold tracking-tight text-ink"
           >
-            <span className="flex size-7 items-center justify-center rounded-lg bg-indigo-600 text-sm font-black text-white">
+            <span className="flex size-7 items-center justify-center rounded-[2px] bg-amber text-sm font-black text-bg">
               C
             </span>
             <span className="hidden sm:inline">
-              Crypto<span className="text-indigo-400">X</span>
+              Crypto<span className="text-amber">X</span>
             </span>
           </Link>
 
@@ -39,48 +47,25 @@ export function Navbar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={cn(
-                  "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
-                  pathname.startsWith(item.href)
-                    ? "bg-zinc-800 text-zinc-50"
-                    : "text-zinc-400 hover:text-zinc-200",
-                )}
+                className={navLink(pathname.startsWith(item.href))}
               >
                 {item.label}
               </Link>
             ))}
             {user?.role === "admin" && (
               <>
-                <Link
-                  href="/admin"
-                  className={cn(
-                    "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
-                    pathname === "/admin"
-                      ? "bg-zinc-800 text-zinc-50"
-                      : "text-zinc-400 hover:text-zinc-200",
-                  )}
-                >
+                <Link href="/admin" className={navLink(pathname === "/admin")}>
                   Dashboard
                 </Link>
                 <Link
                   href="/admin/users"
-                  className={cn(
-                    "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
-                    pathname.startsWith("/admin/users")
-                      ? "bg-zinc-800 text-zinc-50"
-                      : "text-zinc-400 hover:text-zinc-200",
-                  )}
+                  className={navLink(pathname.startsWith("/admin/users"))}
                 >
                   Users
                 </Link>
                 <Link
                   href="/admin/activity"
-                  className={cn(
-                    "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
-                    pathname.startsWith("/admin/activity")
-                      ? "bg-zinc-800 text-zinc-50"
-                      : "text-zinc-400 hover:text-zinc-200",
-                  )}
+                  className={navLink(pathname.startsWith("/admin/activity"))}
                 >
                   Activity
                 </Link>
@@ -93,17 +78,15 @@ export function Navbar() {
           {loading ? null : isAuthenticated && user ? (
             <div className="flex items-center gap-3">
               <div className="hidden text-right sm:block">
-                <p className="text-sm font-medium leading-tight text-zinc-200">
+                <p className="text-sm font-medium leading-tight text-ink">
                   {user.username}
                 </p>
-                <p className="text-xs leading-tight text-zinc-500">
-                  {user.role}
-                </p>
+                <p className="text-xs leading-tight text-ink/50">{user.role}</p>
               </div>
               <NotificationsBell />
               <button
                 onClick={() => logout()}
-                className="cursor-pointer rounded-lg border border-zinc-700 px-3 py-1.5 text-xs font-medium text-zinc-300 transition-colors hover:bg-zinc-800"
+                className="cursor-pointer rounded-[2px] border border-hairline px-3 py-1.5 text-xs font-medium text-ink/70 transition-colors hover:bg-surface-2"
               >
                 Log out
               </button>
@@ -112,13 +95,13 @@ export function Navbar() {
             <div className="flex items-center gap-2">
               <Link
                 href="/login"
-                className="rounded-lg px-3 py-1.5 text-sm font-medium text-zinc-300 transition-colors hover:text-zinc-50"
+                className="rounded-[2px] px-3 py-1.5 text-sm font-medium text-ink/70 transition-colors hover:text-ink"
               >
                 Log in
               </Link>
               <Link
                 href="/register"
-                className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-indigo-500"
+                className="rounded-[2px] bg-amber px-3 py-1.5 text-sm font-medium text-bg transition-colors hover:bg-amber/90"
               >
                 Sign up
               </Link>
@@ -127,7 +110,7 @@ export function Navbar() {
 
           <button
             onClick={() => setMobileOpen((o) => !o)}
-            className="cursor-pointer rounded-lg p-2 text-zinc-400 transition-colors hover:text-zinc-200 md:hidden"
+            className="cursor-pointer rounded-[2px] p-2 text-ink/60 transition-colors hover:text-ink md:hidden"
             aria-label="Toggle navigation"
           >
             <svg
@@ -150,17 +133,17 @@ export function Navbar() {
       </div>
 
       {mobileOpen && (
-        <nav className="border-t border-zinc-800 px-4 py-2 md:hidden">
+        <nav className="border-t border-hairline px-4 py-2 md:hidden">
           {NAV_ITEMS.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               onClick={() => setMobileOpen(false)}
               className={cn(
-                "block rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                "block rounded-[2px] px-3 py-2 text-sm font-medium transition-colors",
                 pathname.startsWith(item.href)
-                  ? "bg-zinc-800 text-zinc-50"
-                  : "text-zinc-400 hover:text-zinc-200",
+                  ? "bg-surface-2 text-ink"
+                  : "text-ink/60 hover:bg-surface-2 hover:text-ink",
               )}
             >
               {item.label}
@@ -172,10 +155,10 @@ export function Navbar() {
                 href="/admin"
                 onClick={() => setMobileOpen(false)}
                 className={cn(
-                  "block rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                  "block rounded-[2px] px-3 py-2 text-sm font-medium transition-colors",
                   pathname === "/admin"
-                    ? "bg-zinc-800 text-zinc-50"
-                    : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200",
+                    ? "bg-surface-2 text-ink"
+                    : "text-ink/60 hover:bg-surface-2 hover:text-ink",
                 )}
               >
                 Dashboard
@@ -183,14 +166,14 @@ export function Navbar() {
               <Link
                 href="/admin/users"
                 onClick={() => setMobileOpen(false)}
-                className="block rounded-lg px-3 py-2 text-sm font-medium text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
+                className="block rounded-[2px] px-3 py-2 text-sm font-medium text-ink/60 transition-colors hover:bg-surface-2 hover:text-ink"
               >
                 Users
               </Link>
               <Link
                 href="/admin/activity"
                 onClick={() => setMobileOpen(false)}
-                className="block rounded-lg px-3 py-2 text-sm font-medium text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
+                className="block rounded-[2px] px-3 py-2 text-sm font-medium text-ink/60 transition-colors hover:bg-surface-2 hover:text-ink"
               >
                 Activity
               </Link>

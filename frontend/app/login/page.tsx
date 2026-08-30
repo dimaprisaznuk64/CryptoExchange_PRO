@@ -26,8 +26,8 @@ export default function LoginPage() {
 
   return (
     <div className="mx-auto flex max-w-md flex-col justify-center px-4 py-16 sm:px-6">
-      <h1 className="mb-1 text-2xl font-bold text-zinc-50">Welcome back</h1>
-      <p className="mb-8 text-sm text-zinc-400">
+      <h1 className="mb-1 text-2xl font-bold text-ink">Welcome back</h1>
+      <p className="mb-8 text-sm text-ink/60">
         Log in to your CryptoX account.
       </p>
 
@@ -58,9 +58,9 @@ export default function LoginPage() {
         </form>
       </Card>
 
-      <p className="mt-6 text-center text-sm text-zinc-400">
+      <p className="mt-6 text-center text-sm text-ink/60">
         Don&apos;t have an account?{" "}
-        <Link href="/register" className="font-medium text-indigo-400 hover:text-indigo-300">
+        <Link href="/register" className="font-medium text-amber hover:text-amber/80">
           Sign up
         </Link>
       </p>

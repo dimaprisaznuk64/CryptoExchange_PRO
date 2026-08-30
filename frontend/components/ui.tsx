@@ -6,7 +6,7 @@ export function Spinner({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "size-5 animate-spin rounded-full border-2 border-zinc-600 border-t-zinc-200",
+        "size-4 animate-spin rounded-full border-2 border-hairline border-t-amber",
         className,
       )}
       aria-label="Loading"
@@ -28,26 +28,23 @@ export function Button({
   loading?: boolean;
 }) {
   const variants: Record<string, string> = {
-    primary:
-      "bg-indigo-600 text-white hover:bg-indigo-500 disabled:hover:bg-indigo-600",
-    success:
-      "bg-emerald-600 text-white hover:bg-emerald-500 disabled:hover:bg-emerald-600",
-    danger:
-      "bg-rose-600 text-white hover:bg-rose-500 disabled:hover:bg-rose-600",
-    ghost: "bg-transparent text-zinc-300 hover:bg-zinc-800",
+    primary: "bg-amber text-bg hover:bg-amber/90 disabled:hover:bg-amber",
+    success: "bg-bull text-bg hover:bg-bull/90 disabled:hover:bg-bull",
+    danger: "bg-bear text-bg hover:bg-bear/90 disabled:hover:bg-bear",
+    ghost: "bg-transparent text-ink/70 hover:bg-surface-2 hover:text-ink",
     outline:
-      "bg-transparent border border-zinc-700 text-zinc-200 hover:bg-zinc-800",
+      "bg-transparent border border-hairline text-ink hover:border-hairline-strong hover:bg-surface",
   };
   const sizes: Record<string, string> = {
-    sm: "px-3 py-1.5 text-xs rounded-lg",
-    md: "px-4 py-2 text-sm rounded-lg",
-    lg: "px-5 py-3 text-base rounded-xl",
+    sm: "px-2.5 py-1 text-[11px]",
+    md: "px-3.5 py-1.5 text-xs",
+    lg: "px-5 py-2.5 text-sm",
   };
 
   return (
     <button
       className={cn(
-        "inline-flex cursor-pointer items-center justify-center gap-2 font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60",
+        "inline-flex cursor-pointer items-center justify-center gap-2 rounded-[2px] font-semibold uppercase tracking-wide transition-colors disabled:cursor-not-allowed disabled:opacity-40",
         variants[variant],
         sizes[size],
         className,
@@ -55,7 +52,7 @@ export function Button({
       disabled={disabled || loading}
       {...props}
     >
-      {loading && <Spinner className="size-4 border-zinc-500" />}
+      {loading && <Spinner className="size-3.5 border-current/30 border-t-current" />}
       {children}
     </button>
   );
@@ -70,10 +67,7 @@ export function Card({
 }) {
   return (
     <div
-      className={cn(
-        "rounded-xl border border-zinc-800 bg-zinc-900/60 backdrop-blur",
-        className,
-      )}
+      className={cn("rounded-[2px] border border-hairline bg-surface", className)}
     >
       {children}
     </div>
@@ -90,13 +84,13 @@ export function CardHeader({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-start justify-between border-b border-zinc-800 px-5 py-4">
+    <div className="flex items-start justify-between border-b border-hairline px-4 py-3">
       <div>
-        <h2 className="text-sm font-semibold tracking-wide text-zinc-100">
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink/90">
           {title}
         </h2>
         {subtitle && (
-          <p className="mt-0.5 text-xs text-zinc-500">{subtitle}</p>
+          <p className="mt-0.5 font-body text-xs text-ink/50">{subtitle}</p>
         )}
       </div>
       {action}
@@ -114,19 +108,19 @@ export function Input(
   return (
     <label className="block">
       {label && (
-        <span className="mb-1 block text-xs font-medium text-zinc-400">
+        <span className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-ink/50">
           {label}
         </span>
       )}
       <input
         className={cn(
-          "w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 outline-none transition-colors focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500",
-          error && "border-rose-500 focus:border-rose-500 focus:ring-rose-500",
+          "w-full rounded-[2px] border border-hairline bg-bg px-2.5 py-2 text-sm text-ink placeholder-ink/30 outline-none transition-colors tabular-nums focus:border-amber",
+          error && "border-bear focus:border-bear",
           className,
         )}
         {...rest}
       />
-      {error && <span className="mt-1 block text-xs text-rose-400">{error}</span>}
+      {error && <span className="mt-1 block text-xs text-bear">{error}</span>}
     </label>
   );
 }
@@ -140,13 +134,13 @@ export function Select(
   return (
     <label className="block">
       {label && (
-        <span className="mb-1 block text-xs font-medium text-zinc-400">
+        <span className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-ink/50">
           {label}
         </span>
       )}
       <select
         className={cn(
-          "w-full appearance-none rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none transition-colors focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500",
+          "w-full appearance-none rounded-[2px] border border-hairline bg-bg px-2.5 py-2 text-sm text-ink outline-none transition-colors focus:border-amber",
           className,
         )}
         {...rest}
@@ -165,16 +159,16 @@ export function Badge({
   tone?: "default" | "green" | "red" | "amber" | "blue";
 }) {
   const tones: Record<string, string> = {
-    default: "bg-zinc-800 text-zinc-300",
-    green: "bg-emerald-500/10 text-emerald-400",
-    red: "bg-rose-500/10 text-rose-400",
-    amber: "bg-amber-500/10 text-amber-400",
-    blue: "bg-sky-500/10 text-sky-400",
+    default: "bg-surface-2 text-ink/60",
+    green: "bg-bull/10 text-bull",
+    red: "bg-bear/10 text-bear",
+    amber: "bg-amber/10 text-amber",
+    blue: "bg-ink/10 text-ink/70",
   };
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded px-2 py-0.5 text-xs font-medium",
+        "inline-flex items-center rounded-[2px] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
         tones[tone],
       )}
     >
@@ -191,13 +185,16 @@ export function Alert({
   tone?: "error" | "success" | "info";
 }) {
   const tones: Record<string, string> = {
-    error: "border-rose-500/40 bg-rose-500/10 text-rose-300",
-    success: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300",
-    info: "border-sky-500/40 bg-sky-500/10 text-sky-300",
+    error: "border-bear text-bear",
+    success: "border-bull text-bull",
+    info: "border-amber text-amber",
   };
   return (
     <div
-      className={cn("rounded-lg border px-3 py-2 text-sm", tones[tone])}
+      className={cn(
+        "rounded-[2px] border-l-2 bg-surface px-3 py-2 font-body text-sm text-ink/90",
+        tones[tone],
+      )}
       role="alert"
     >
       {children}

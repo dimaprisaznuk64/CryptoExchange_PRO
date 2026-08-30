@@ -28,7 +28,7 @@ function PortfolioPanel() {
   }
 
   if (error || !data) {
-    return <p className="py-16 text-center text-sm text-rose-400">{error}</p>;
+    return <p className="py-16 text-center text-sm text-bear">{error}</p>;
   }
 
   const nonZero = data.items.filter((i) => i.balance > 0);
@@ -38,15 +38,15 @@ function PortfolioPanel() {
       <Card className="p-6">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+            <p className="text-xs font-medium uppercase tracking-wide text-ink/50">
               Total portfolio value
             </p>
-            <p className="mt-1 text-3xl font-extrabold text-zinc-50">
+            <p className="mt-1 text-3xl font-extrabold text-ink">
               {formatUsd(data.total_usd)}
             </p>
           </div>
           <div className="text-right">
-            <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+            <p className="text-xs font-medium uppercase tracking-wide text-ink/50">
               Unrealized P&L
             </p>
             {nonZero.length > 0 && (
@@ -54,8 +54,8 @@ function PortfolioPanel() {
                 className={cn(
                   "mt-1 text-xl font-bold",
                   nonZero.reduce((s, i) => s + i.pnl_usd, 0) >= 0
-                    ? "text-emerald-400"
-                    : "text-rose-400",
+                    ? "text-bull"
+                    : "text-bear",
                 )}
               >
                 {formatUsd(
@@ -85,7 +85,7 @@ function PortfolioPanel() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-zinc-800 text-xs text-zinc-500">
+              <tr className="border-b border-hairline text-xs text-ink/50">
                 <th className="px-5 py-2 font-medium">Asset</th>
                 <th className="px-5 py-2 text-right font-medium">Balance</th>
                 <th className="px-5 py-2 text-right font-medium">Price (USD)</th>
@@ -97,24 +97,24 @@ function PortfolioPanel() {
               {nonZero.map((item) => (
                 <tr
                   key={item.asset}
-                  className="border-b border-zinc-800/60 last:border-0"
+                  className="border-b border-hairline/60 last:border-0"
                 >
-                  <td className="px-5 py-2.5 font-semibold text-zinc-100">
+                  <td className="px-5 py-2.5 font-semibold text-ink">
                     {item.asset}
                   </td>
-                  <td className="px-5 py-2.5 text-right font-mono text-zinc-300">
+                  <td className="px-5 py-2.5 text-right font-mono text-ink/80">
                     {formatNumber(item.balance)}
                   </td>
-                  <td className="px-5 py-2.5 text-right font-mono text-zinc-300">
+                  <td className="px-5 py-2.5 text-right font-mono text-ink/80">
                     {formatNumber(item.usd_price)}
                   </td>
-                  <td className="px-5 py-2.5 text-right font-mono text-zinc-200">
+                  <td className="px-5 py-2.5 text-right font-mono text-ink/90">
                     {formatUsd(item.value_usd)}
                   </td>
                   <td
                     className={cn(
                       "px-5 py-2.5 text-right font-mono",
-                      item.pnl_usd >= 0 ? "text-emerald-400" : "text-rose-400",
+                      item.pnl_usd >= 0 ? "text-bull" : "text-bear",
                     )}
                   >
                     {formatUsd(item.pnl_usd)}
@@ -125,14 +125,14 @@ function PortfolioPanel() {
                 <tr>
                   <td
                     colSpan={5}
-                    className="px-5 py-8 text-center text-sm text-zinc-500"
+                    className="px-5 py-8 text-center text-sm text-ink/50"
                   >
                     No assets yet.{" "}
-                    <a href="/wallets" className="text-indigo-400">
+                    <a href="/wallets" className="text-amber">
                       Deposit funds
                     </a>{" "}
                     or{" "}
-                    <a href="/trade" className="text-indigo-400">
+                    <a href="/trade" className="text-amber">
                       place an order
                     </a>
                     .
@@ -149,7 +149,7 @@ function PortfolioPanel() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-zinc-800 text-xs text-zinc-500">
+              <tr className="border-b border-hairline text-xs text-ink/50">
                 <th className="px-5 py-2 font-medium">Time</th>
                 <th className="px-5 py-2 font-medium">Pair</th>
                 <th className="px-5 py-2 font-medium">Side</th>
@@ -162,12 +162,12 @@ function PortfolioPanel() {
               {(trades.data ?? []).map((t) => (
                 <tr
                   key={t.id}
-                  className="border-b border-zinc-800/60 last:border-0"
+                  className="border-b border-hairline/60 last:border-0"
                 >
-                  <td className="px-5 py-2 text-xs text-zinc-500">
+                  <td className="px-5 py-2 text-xs text-ink/50">
                     {formatDateTime(t.created_at)}
                   </td>
-                  <td className="px-5 py-2 font-medium text-zinc-200">
+                  <td className="px-5 py-2 font-medium text-ink/90">
                     {t.pair}
                   </td>
                   <td className="px-5 py-2">
@@ -175,20 +175,20 @@ function PortfolioPanel() {
                       className={cn(
                         "rounded px-2 py-0.5 text-xs font-semibold",
                         t.side === "buy"
-                          ? "bg-emerald-500/10 text-emerald-400"
-                          : "bg-rose-500/10 text-rose-400",
+                          ? "bg-bull/10 text-bull"
+                          : "bg-bear/10 text-bear",
                       )}
                     >
                       {t.side}
                     </span>
                   </td>
-                  <td className="px-5 py-2 text-right font-mono text-zinc-300">
+                  <td className="px-5 py-2 text-right font-mono text-ink/80">
                     {formatNumber(t.price)}
                   </td>
-                  <td className="px-5 py-2 text-right font-mono text-zinc-300">
+                  <td className="px-5 py-2 text-right font-mono text-ink/80">
                     {formatNumber(t.qty)}
                   </td>
-                  <td className="px-5 py-2 text-right font-mono text-zinc-200">
+                  <td className="px-5 py-2 text-right font-mono text-ink/90">
                     {formatUsd(t.notional)}
                   </td>
                 </tr>
@@ -197,10 +197,10 @@ function PortfolioPanel() {
                 <tr>
                   <td
                     colSpan={6}
-                    className="px-5 py-8 text-center text-sm text-zinc-500"
+                    className="px-5 py-8 text-center text-sm text-ink/50"
                   >
                     No trades yet. Visit the{" "}
-                    <a href="/trade" className="text-indigo-400">
+                    <a href="/trade" className="text-amber">
                       trading page
                     </a>{" "}
                     to place your first order.
@@ -223,8 +223,8 @@ export default function DashboardPage() {
     <Protected>
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-zinc-50">Dashboard</h1>
-          <p className="text-sm text-zinc-400">
+          <h1 className="text-2xl font-bold text-ink">Dashboard</h1>
+          <p className="text-sm text-ink/60">
             Welcome back, {user?.username}. Here is your portfolio at a glance.
           </p>
         </div>

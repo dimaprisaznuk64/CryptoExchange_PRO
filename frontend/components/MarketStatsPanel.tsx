@@ -41,12 +41,12 @@ export const MarketStatsPanel = memo(function MarketStatsPanel({ pair }: MarketS
       <div className="grid grid-cols-2 gap-x-6 gap-y-3 p-5 sm:grid-cols-4">
         {items.map((it) => (
           <div key={it.label}>
-            <div className="text-xs text-zinc-500">{it.label}</div>
+            <div className="text-xs text-ink/50">{it.label}</div>
             <div
               className={cn(
-                "mt-0.5 font-mono text-sm font-semibold text-zinc-100",
-                it.tone === "up" && "text-emerald-400",
-                it.tone === "down" && "text-rose-400",
+                "mt-0.5 font-mono text-sm font-semibold text-ink",
+                it.tone === "up" && "text-bull",
+                it.tone === "down" && "text-bear",
               )}
             >
               {it.value}

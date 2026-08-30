@@ -1,25 +1,59 @@
 @import "tailwindcss";
 
 :root {
-  --background: #09090b;
-  --foreground: #f4f4f5;
-  --card: #18181b;
-  --border: #27272a;
+  --bg: #0a0a0b;
+  --surface: #141416;
+  --surface-2: #1a1a1d;
+  --ink: #e7e5dd;
+  --amber: #ffae00;
+  --bull: #17c979;
+  --bear: #ff4d4d;
+  --hairline: rgb(231 229 221 / 12%);
+  --hairline-strong: rgb(231 229 221 / 22%);
+
+  /* legacy aliases kept so existing zinc-* utility usage still resolves sanely
+     during migration; prefer the tokens above in new code */
+  --background: var(--bg);
+  --foreground: var(--ink);
+  --card: var(--surface);
+  --border: var(--hairline);
 }
 
 @theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-amber: var(--amber);
+  --color-bull: var(--bull);
+  --color-bear: var(--bear);
+  --color-hairline: var(--hairline);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-border: var(--border);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+
+  --font-sans: var(--font-mono-primary);
+  --font-mono: var(--font-mono-primary);
+  --font-body: var(--font-sans-body);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-mono-primary), ui-monospace, "SF Mono", Menlo, monospace;
+  font-feature-settings: "tnum" 1, "cv01" 1;
+}
+
+/* Numbers in a terminal always align — turn on tabular figures everywhere
+   a price, balance or quantity might render. */
+.tabular,
+table {
+  font-variant-numeric: tabular-nums;
+}
+
+::selection {
+  background: var(--amber);
+  color: var(--bg);
 }
 
 ::-webkit-scrollbar {
@@ -30,9 +64,40 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #3f3f46;
-  border-radius: 4px;
+  background: var(--surface-2);
+  border-radius: 2px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #52525b;
+  background: var(--hairline-strong);
+}
+
+/* Signature: live values flash when they change. Applied via the
+   FlashValue component (components/FlashValue.tsx). */
+@keyframes flash-bull {
+  0% {
+    background-color: rgb(23 201 121 / 35%);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+@keyframes flash-bear {
+  0% {
+    background-color: rgb(255 77 77 / 35%);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+.flash-up {
+  animation: flash-bull 400ms ease-out;
+}
+.flash-down {
+  animation: flash-bear 400ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .flash-up,
+  .flash-down {
+    animation: none;
+  }
 }

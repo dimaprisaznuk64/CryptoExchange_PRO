@@ -27,7 +27,7 @@ export const OrderBook = memo(function OrderBook({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between text-xs font-medium text-zinc-500">
+      <div className="flex items-center justify-between text-xs font-medium text-ink/50">
         <span>Price</span>
         <span>Amount</span>
       </div>
@@ -39,32 +39,32 @@ export const OrderBook = memo(function OrderBook({
             className="relative flex items-center justify-between overflow-hidden rounded px-2 py-[2px] text-[11px] font-mono"
           >
             <div
-              className="absolute inset-y-0 right-0 bg-rose-500/10"
+              className="absolute inset-y-0 right-0 bg-bear/10"
               style={{ width: `${(l.ask_qty / maxQty) * 100}%` }}
             />
-            <span className="relative text-rose-400">
+            <span className="relative text-bear">
               {formatPrice(l.ask)}
             </span>
-            <span className="relative text-zinc-400">
+            <span className="relative text-ink/60">
               {formatNumber(l.ask_qty)}
             </span>
           </div>
         ))}
       </div>
 
-      <div className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-center">
+      <div className="rounded-[2px] border border-hairline bg-bg px-3 py-2 text-center">
         {bestBid && bestAsk ? (
           <div className="flex items-center justify-between text-xs">
-            <span className="text-emerald-400">
+            <span className="text-bull">
               B {formatPrice(bestBid)}
             </span>
-            <span className="text-zinc-500">
+            <span className="text-ink/50">
               spread {spread != null ? formatPrice(spread) : "-"}
             </span>
-            <span className="text-rose-400">A {formatPrice(bestAsk)}</span>
+            <span className="text-bear">A {formatPrice(bestAsk)}</span>
           </div>
         ) : (
-          <span className="text-xs text-zinc-500">No book yet</span>
+          <span className="text-xs text-ink/50">No book yet</span>
         )}
       </div>
 
@@ -75,13 +75,13 @@ export const OrderBook = memo(function OrderBook({
             className="relative flex items-center justify-between overflow-hidden rounded px-2 py-[2px] text-[11px] font-mono"
           >
             <div
-              className="absolute inset-y-0 right-0 bg-emerald-500/10"
+              className="absolute inset-y-0 right-0 bg-bull/10"
               style={{ width: `${(l.bid_qty / maxQty) * 100}%` }}
             />
-            <span className="relative text-emerald-400">
+            <span className="relative text-bull">
               {formatPrice(l.bid)}
             </span>
-            <span className="relative text-zinc-400">
+            <span className="relative text-ink/60">
               {formatNumber(l.bid_qty)}
             </span>
           </div>

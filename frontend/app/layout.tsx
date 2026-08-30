@@ -1,17 +1,22 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { JetBrains_Mono, IBM_Plex_Sans } from "next/font/google";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Navbar } from "@/components/Navbar";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Terminal identity: monospace carries the whole UI (headers, nav, data,
+// buttons) — not just numbers. Plex Sans is reserved for longer prose
+// (empty states, help text) where mono would hurt readability.
+const mono = JetBrains_Mono({
+  variable: "--font-mono-primary",
   subsets: ["latin"],
+  weight: ["400", "500", "700", "800"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const sansBody = IBM_Plex_Sans({
+  variable: "--font-sans-body",
   subsets: ["latin"],
+  weight: ["400", "500"],
 });
 
 export const metadata: Metadata = {
@@ -24,9 +29,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${mono.variable} ${sansBody.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-zinc-950 text-zinc-100">
+      <body className="min-h-full flex flex-col bg-bg text-ink">
         <AuthProvider>
           <Navbar />
           <main className="flex-1">{children}</main>

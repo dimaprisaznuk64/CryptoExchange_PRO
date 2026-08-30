@@ -11,6 +11,7 @@ import { Alert, Badge, Button, Card, CardHeader, Input, Select, Spinner } from "
 import { OrderBook } from "@/components/OrderBook";
 import { CandleChart } from "@/components/CandleChart";
 import { MarketStatsPanel } from "@/components/MarketStatsPanel";
+import { FlashValue } from "@/components/FlashValue";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDateTime, formatPercent, formatPrice } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -73,7 +74,7 @@ function TradingView() {
     ) : t === "stop_loss" ? (
       <Badge tone="red">SL</Badge>
     ) : (
-      <span className="text-xs capitalize text-zinc-500">{t}</span>
+      <span className="text-xs capitalize text-ink0">{t}</span>
     );
 
   const livePrice = realtime.prices[pair];
@@ -166,30 +167,23 @@ function TradingView() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-50">{pair}</h1>
+          <h1 className="text-2xl font-bold text-ink">{pair}</h1>
           {ticker && (
-            <div className="mt-1 flex items-center gap-3 text-sm text-zinc-400">
-              <span
-                className={cn(
-                  "font-mono text-lg font-semibold",
-                  realtime.prices[pair] ?? ticker.last >= ticker.open_24h
-                    ? "text-emerald-400"
-                    : "text-rose-400",
-                )}
-              >
-                {formatPrice(livePrice ?? ticker.last)}
+            <div className="mt-1 flex items-center gap-3 text-sm text-ink/60">
+              <span className="font-mono text-lg font-semibold">
+                <FlashValue value={livePrice ?? ticker.last} format={formatPrice} />
               </span>
               <span
                 className={cn(
                   "font-mono",
-                  ticker.change_24h >= 0 ? "text-emerald-400" : "text-rose-400",
+                  ticker.change_24h >= 0 ? "text-bull" : "text-bear",
                 )}
               >
                 {formatPercent(ticker.change_24h)}
               </span>
               {realtime.connected && (
-                <span className="flex items-center gap-1 text-xs text-emerald-400">
-                  <span className="size-1.5 animate-pulse rounded-full bg-emerald-400" />
+                <span className="flex items-center gap-1 text-xs text-bull">
+                  <span className="size-1.5 animate-pulse rounded-full bg-bull" />
                   live
                 </span>
               )}
@@ -224,8 +218,8 @@ function TradingView() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
-          <div className="flex items-center justify-between border-b border-zinc-800 px-5 py-3">
-            <div className="flex rounded-lg border border-zinc-700 p-0.5">
+          <div className="flex items-center justify-between border-b border-hairline px-5 py-3">
+            <div className="flex rounded-[2px] border border-hairline p-0.5">
               {[1, 5, 15, 60].map((m) => (
                 <button
                   key={m}
@@ -233,17 +227,17 @@ function TradingView() {
                     setIntervalM(m);
                   }}
                   className={cn(
-                    "cursor-pointer rounded-md px-3 py-1 text-xs font-medium transition-colors",
+                    "cursor-pointer rounded-[2px] px-3 py-1 text-xs font-medium transition-colors",
                     interval === m
-                      ? "bg-indigo-600 text-white"
-                      : "text-zinc-400 hover:text-zinc-200",
+                      ? "bg-amber text-bg"
+                      : "text-ink/60 hover:text-ink/90",
                   )}
                 >
                   {m}m
                 </button>
               ))}
             </div>
-            <span className="text-xs text-zinc-500">OHLC chart</span>
+            <span className="text-xs text-ink0">OHLC chart</span>
           </div>
           <div className="p-4">
             {candlesLoading ? (
@@ -268,7 +262,7 @@ function TradingView() {
               />
             ) : (
               <div className="flex h-64 items-center justify-center">
-                <span className="text-sm text-zinc-500">Connecting…</span>
+                <span className="text-sm text-ink0">Connecting…</span>
               </div>
             )}
           </div>
@@ -282,17 +276,17 @@ function TradingView() {
             {orderError && <Alert>{orderError}</Alert>}
             {orderSuccess && <Alert tone="success">{orderSuccess}</Alert>}
 
-            <div className="flex rounded-lg border border-zinc-700 p-0.5">
+            <div className="flex rounded-[2px] border border-hairline p-0.5">
               {(["market", "limit"] as const).map((t) => (
                 <button
                   key={t}
                   type="button"
                   onClick={() => setOrderType(t)}
                   className={cn(
-                    "flex-1 cursor-pointer rounded-md py-2 text-sm font-semibold transition-colors",
+                    "flex-1 cursor-pointer rounded-[2px] py-2 text-sm font-semibold transition-colors",
                     orderType === t
-                      ? "bg-indigo-600 text-white"
-                      : "text-zinc-400 hover:text-zinc-200",
+                      ? "bg-amber text-bg"
+                      : "text-ink/60 hover:text-ink/90",
                   )}
                 >
                   {t === "market" ? "Market" : "Limit"}
@@ -300,15 +294,15 @@ function TradingView() {
               ))}
             </div>
 
-            <div className="flex rounded-lg border border-zinc-700 p-0.5">
+            <div className="flex rounded-[2px] border border-hairline p-0.5">
               <button
                 type="button"
                 onClick={() => setSide("buy")}
                 className={cn(
-                  "flex-1 cursor-pointer rounded-md py-2 text-sm font-semibold transition-colors",
+                  "flex-1 cursor-pointer rounded-[2px] py-2 text-sm font-semibold transition-colors",
                   side === "buy"
-                    ? "bg-emerald-600 text-white"
-                    : "text-zinc-400 hover:text-zinc-200",
+                    ? "bg-bull text-bg"
+                    : "text-ink/60 hover:text-ink/90",
                 )}
               >
                 Buy
@@ -317,10 +311,10 @@ function TradingView() {
                 type="button"
                 onClick={() => setSide("sell")}
                 className={cn(
-                  "flex-1 cursor-pointer rounded-md py-2 text-sm font-semibold transition-colors",
+                  "flex-1 cursor-pointer rounded-[2px] py-2 text-sm font-semibold transition-colors",
                   side === "sell"
-                    ? "bg-rose-600 text-white"
-                    : "text-zinc-400 hover:text-zinc-200",
+                    ? "bg-bear text-bg"
+                    : "text-ink/60 hover:text-ink/90",
                 )}
               >
                 Sell
@@ -353,16 +347,16 @@ function TradingView() {
               />
             )}
 
-            <div className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs">
-              <span className="text-zinc-400">Take-profit / Stop-loss</span>
+            <div className="flex items-center justify-between rounded-[2px] border border-hairline bg-bg px-3 py-2 text-xs">
+              <span className="text-ink/60">Take-profit / Stop-loss</span>
               <button
                 type="button"
                 onClick={() => setAddTpsl((v) => !v)}
                 className={cn(
-                  "cursor-pointer rounded-md px-2 py-1 font-medium transition-colors",
+                  "cursor-pointer rounded-[2px] px-2 py-1 font-medium transition-colors",
                   addTpsl
-                    ? "bg-indigo-600 text-white"
-                    : "text-indigo-400 hover:text-indigo-300",
+                    ? "bg-amber text-bg"
+                    : "text-amber hover:text-amber/80",
                 )}
               >
                 {addTpsl ? "Remove" : "Add"}
@@ -395,11 +389,11 @@ function TradingView() {
             )}
 
             {estTotal > 0 && (
-              <div className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs">
-                <span className="text-zinc-500">
+              <div className="flex items-center justify-between rounded-[2px] border border-hairline bg-bg px-3 py-2 text-xs">
+                <span className="text-ink0">
                   Est. total ({orderType === "limit" ? "at limit" : "at market"})
                 </span>
-                <span className="font-mono font-medium text-zinc-200">
+                <span className="font-mono font-medium text-ink/90">
                   {estTotal.toLocaleString("en-US", {
                     maximumFractionDigits: 2,
                   })}{" "}
@@ -426,16 +420,16 @@ function TradingView() {
           <CardHeader
             title="Activity"
             action={
-              <div className="flex rounded-lg border border-zinc-700 p-0.5">
+              <div className="flex rounded-[2px] border border-hairline p-0.5">
                 {(["orders", "trades"] as const).map((t) => (
                   <button
                     key={t}
                     onClick={() => setActiveTab(t)}
                     className={cn(
-                      "cursor-pointer rounded-md px-3 py-1 text-xs font-medium capitalize transition-colors",
+                      "cursor-pointer rounded-[2px] px-3 py-1 text-xs font-medium capitalize transition-colors",
                       activeTab === t
-                        ? "bg-indigo-600 text-white"
-                        : "text-zinc-400 hover:text-zinc-200",
+                        ? "bg-amber text-bg"
+                        : "text-ink/60 hover:text-ink/90",
                     )}
                   >
                     {t}
@@ -444,7 +438,7 @@ function TradingView() {
               </div>
             }
           />
-          <div className="flex flex-wrap items-center gap-3 border-b border-zinc-800 px-5 py-3">
+          <div className="flex flex-wrap items-center gap-3 border-b border-hairline px-5 py-3">
             <Select
               value={activeTab === "orders" ? orderFilter.pair : tradeFilter.pair}
               onChange={(e) => {
@@ -517,7 +511,7 @@ function TradingView() {
                     setOrderFilter({ pair: "", type: "", status: "" });
                   else setTradeFilter({ pair: "", side: "" });
                 }}
-                className="cursor-pointer text-xs font-medium text-indigo-400 hover:text-indigo-300"
+                className="cursor-pointer text-xs font-medium text-amber hover:text-amber/80"
               >
                 Reset
               </button>
@@ -527,7 +521,7 @@ function TradingView() {
             {activeTab === "orders" ? (
               <table className="w-full text-left text-sm">
                 <thead>
-                  <tr className="border-b border-zinc-800 text-xs text-zinc-500">
+                  <tr className="border-b border-hairline text-xs text-ink0">
                     <th className="px-5 py-2 font-medium">Time</th>
                     <th className="px-5 py-2 font-medium">Pair</th>
                     <th className="px-5 py-2 font-medium">Side</th>
@@ -543,12 +537,12 @@ function TradingView() {
                   {(orders.data ?? []).map((o) => (
                     <tr
                       key={o.id}
-                      className="border-b border-zinc-800/60 last:border-0"
+                      className="border-b border-hairline/60 last:border-0"
                     >
-                      <td className="px-5 py-2 text-xs text-zinc-500">
+                      <td className="px-5 py-2 text-xs text-ink0">
                         {formatDateTime(o.created_at)}
                       </td>
-                      <td className="px-5 py-2 text-xs text-zinc-400">
+                      <td className="px-5 py-2 text-xs text-ink/60">
                         {o.pair}
                       </td>
                       <td className="px-5 py-2">
@@ -557,13 +551,13 @@ function TradingView() {
                         </Badge>
                       </td>
                       <td className="px-5 py-2">{orderTypeBadge(o.type)}</td>
-                      <td className="px-5 py-2 text-right font-mono text-zinc-300">
+                      <td className="px-5 py-2 text-right font-mono text-ink/80">
                         {o.price != null ? formatPrice(o.price) : "-"}
                       </td>
-                      <td className="px-5 py-2 text-right font-mono text-zinc-300">
+                      <td className="px-5 py-2 text-right font-mono text-ink/80">
                         {o.qty}
                       </td>
-                      <td className="px-5 py-2 text-right font-mono text-zinc-400">
+                      <td className="px-5 py-2 text-right font-mono text-ink/60">
                         {o.filled_qty}
                       </td>
                       <td className="px-5 py-2">
@@ -597,7 +591,7 @@ function TradingView() {
                     <tr>
                       <td
                         colSpan={8}
-                        className="px-5 py-8 text-center text-sm text-zinc-500"
+                        className="px-5 py-8 text-center text-sm text-ink0"
                       >
                         No orders yet.
                       </td>
@@ -608,7 +602,7 @@ function TradingView() {
             ) : (
               <table className="w-full text-left text-sm">
                 <thead>
-                  <tr className="border-b border-zinc-800 text-xs text-zinc-500">
+                  <tr className="border-b border-hairline text-xs text-ink0">
                     <th className="px-5 py-2 font-medium">Time</th>
                     <th className="px-5 py-2 font-medium">Pair</th>
                     <th className="px-5 py-2 font-medium">Side</th>
@@ -621,12 +615,12 @@ function TradingView() {
                   {(trades.data ?? []).map((t) => (
                     <tr
                       key={t.id}
-                      className="border-b border-zinc-800/60 last:border-0"
+                      className="border-b border-hairline/60 last:border-0"
                     >
-                      <td className="px-5 py-2 text-xs text-zinc-500">
+                      <td className="px-5 py-2 text-xs text-ink0">
                         {formatDateTime(t.created_at)}
                       </td>
-                      <td className="px-5 py-2 text-xs text-zinc-400">
+                      <td className="px-5 py-2 text-xs text-ink/60">
                         {t.pair}
                       </td>
                       <td className="px-5 py-2">
@@ -634,13 +628,13 @@ function TradingView() {
                           {t.side}
                         </Badge>
                       </td>
-                      <td className="px-5 py-2 text-right font-mono text-zinc-300">
+                      <td className="px-5 py-2 text-right font-mono text-ink/80">
                         {formatPrice(t.price)}
                       </td>
-                      <td className="px-5 py-2 text-right font-mono text-zinc-300">
+                      <td className="px-5 py-2 text-right font-mono text-ink/80">
                         {t.qty}
                       </td>
-                      <td className="px-5 py-2 text-right font-mono text-zinc-300">
+                      <td className="px-5 py-2 text-right font-mono text-ink/80">
                         {t.notional.toLocaleString("en-US", {
                           maximumFractionDigits: 2,
                         })}
@@ -651,7 +645,7 @@ function TradingView() {
                     <tr>
                       <td
                         colSpan={6}
-                        className="px-5 py-8 text-center text-sm text-zinc-500"
+                        className="px-5 py-8 text-center text-sm text-ink0"
                       >
                         No trades yet.
                       </td>

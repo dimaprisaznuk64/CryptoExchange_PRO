@@ -47,16 +47,16 @@ function ActivityTabs({ tab, onChange }: { tab: Tab; onChange: (t: Tab) => void 
     { key: "trades", label: "Trades" },
   ];
   return (
-    <div className="inline-flex rounded-lg border border-zinc-800 bg-zinc-900 p-1">
+    <div className="inline-flex rounded-[2px] border border-hairline bg-surface p-1">
       {tabs.map((t) => (
         <button
           key={t.key}
           onClick={() => onChange(t.key)}
           className={cn(
-            "rounded-md px-4 py-1.5 text-sm font-medium transition-colors",
+            "rounded-[2px] px-4 py-1.5 text-sm font-medium transition-colors",
             tab === t.key
-              ? "bg-indigo-600 text-white"
-              : "text-zinc-400 hover:text-zinc-200",
+              ? "bg-amber text-bg"
+              : "text-ink/60 hover:text-ink",
           )}
         >
           {t.label}
@@ -158,7 +158,7 @@ function ActivityManager() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-zinc-800 text-xs text-zinc-500">
+                <tr className="border-b border-hairline text-xs text-ink/50">
                   <th className="px-5 py-2 font-medium">User</th>
                   <th className="px-5 py-2 font-medium">Pair</th>
                   <th className="px-5 py-2 font-medium">Side</th>
@@ -171,33 +171,33 @@ function ActivityManager() {
               </thead>
               <tbody>
                 {(orders.data?.orders ?? []).map((o) => (
-                  <tr key={o.id} className="border-b border-zinc-800/60 last:border-0">
+                  <tr key={o.id} className="border-b border-hairline/60 last:border-0">
                     <td className="px-5 py-2.5">
-                      <p className="font-medium text-zinc-100">{o.user_username}</p>
-                      <p className="text-xs text-zinc-500">{o.user_email}</p>
+                      <p className="font-medium text-ink">{o.user_username}</p>
+                      <p className="text-xs text-ink/50">{o.user_email}</p>
                     </td>
-                    <td className="px-5 py-2.5 font-mono text-zinc-200">{o.pair}</td>
+                    <td className="px-5 py-2.5 font-mono text-ink/90">{o.pair}</td>
                     <td className="px-5 py-2.5">
                       <Badge tone={sideTone(o.side)}>{o.side}</Badge>
                     </td>
-                    <td className="px-5 py-2.5 text-zinc-300">{o.type}</td>
-                    <td className="px-5 py-2.5 text-right font-mono text-zinc-200">
+                    <td className="px-5 py-2.5 text-ink/80">{o.type}</td>
+                    <td className="px-5 py-2.5 text-right font-mono text-ink/90">
                       {o.price == null ? "—" : formatPrice(o.price)}
                     </td>
-                    <td className="px-5 py-2.5 text-right font-mono text-zinc-300">
+                    <td className="px-5 py-2.5 text-right font-mono text-ink/80">
                       {formatNumber(o.filled_qty, 6)} / {formatNumber(o.qty, 6)}
                     </td>
                     <td className="px-5 py-2.5">
                       <Badge tone={statusTone(o.status)}>{o.status}</Badge>
                     </td>
-                    <td className="px-5 py-2.5 text-right text-zinc-400">
+                    <td className="px-5 py-2.5 text-right text-ink/60">
                       {formatDateTime(o.created_at)}
                     </td>
                   </tr>
                 ))}
                 {orders.data && orders.data.orders.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="px-5 py-8 text-center text-sm text-zinc-500">
+                    <td colSpan={8} className="px-5 py-8 text-center text-sm text-ink/50">
                       No orders found.
                     </td>
                   </tr>
@@ -212,7 +212,7 @@ function ActivityManager() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-zinc-800 text-xs text-zinc-500">
+                <tr className="border-b border-hairline text-xs text-ink/50">
                   <th className="px-5 py-2 font-medium">User</th>
                   <th className="px-5 py-2 font-medium">Pair</th>
                   <th className="px-5 py-2 font-medium">Side</th>
@@ -224,32 +224,32 @@ function ActivityManager() {
               </thead>
               <tbody>
                 {(trades.data?.trades ?? []).map((t) => (
-                  <tr key={t.id} className="border-b border-zinc-800/60 last:border-0">
+                  <tr key={t.id} className="border-b border-hairline/60 last:border-0">
                     <td className="px-5 py-2.5">
-                      <p className="font-medium text-zinc-100">{t.user_username}</p>
-                      <p className="text-xs text-zinc-500">{t.user_email}</p>
+                      <p className="font-medium text-ink">{t.user_username}</p>
+                      <p className="text-xs text-ink/50">{t.user_email}</p>
                     </td>
-                    <td className="px-5 py-2.5 font-mono text-zinc-200">{t.pair}</td>
+                    <td className="px-5 py-2.5 font-mono text-ink/90">{t.pair}</td>
                     <td className="px-5 py-2.5">
                       <Badge tone={sideTone(t.side)}>{t.side}</Badge>
                     </td>
-                    <td className="px-5 py-2.5 text-right font-mono text-zinc-200">
+                    <td className="px-5 py-2.5 text-right font-mono text-ink/90">
                       {formatPrice(t.price)}
                     </td>
-                    <td className="px-5 py-2.5 text-right font-mono text-zinc-200">
+                    <td className="px-5 py-2.5 text-right font-mono text-ink/90">
                       {formatNumber(t.qty, 6)}
                     </td>
-                    <td className="px-5 py-2.5 text-right font-mono text-zinc-200">
+                    <td className="px-5 py-2.5 text-right font-mono text-ink/90">
                       {formatNumber(t.notional, 2)}
                     </td>
-                    <td className="px-5 py-2.5 text-right text-zinc-400">
+                    <td className="px-5 py-2.5 text-right text-ink/60">
                       {formatDateTime(t.created_at)}
                     </td>
                   </tr>
                 ))}
                 {trades.data && trades.data.trades.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-5 py-8 text-center text-sm text-zinc-500">
+                    <td colSpan={7} className="px-5 py-8 text-center text-sm text-ink/50">
                       No trades found.
                     </td>
                   </tr>
@@ -270,8 +270,8 @@ export default function AdminActivityPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-zinc-50">Admin · Activity</h1>
-        <p className="text-sm text-zinc-400">
+        <h1 className="text-2xl font-bold text-ink">Admin · Activity</h1>
+        <p className="text-sm text-ink/60">
           Browse all orders and trades across every user.
         </p>
       </div>

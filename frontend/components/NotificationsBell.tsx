@@ -57,7 +57,7 @@ export function NotificationsBell() {
       <button
         onClick={handleToggle}
         aria-label="Notifications"
-        className="relative cursor-pointer rounded-lg p-2 text-zinc-400 transition-colors hover:text-zinc-200"
+        className="relative cursor-pointer rounded-[2px] p-2 text-ink/60 transition-colors hover:text-ink"
       >
         <svg
           width="18"
@@ -73,23 +73,23 @@ export function NotificationsBell() {
           <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
         </svg>
         {unread > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
+          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-bear px-1 text-[10px] font-bold text-bg">
             {unread > 99 ? "99+" : unread}
           </span>
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900 shadow-xl">
-          <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
-            <h3 className="text-sm font-semibold text-zinc-100">Notifications</h3>
-            <Link href="/notifications" className="text-xs font-medium text-indigo-400">
+        <div className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-[2px] border border-hairline bg-surface shadow-xl">
+          <div className="flex items-center justify-between border-b border-hairline px-4 py-3">
+            <h3 className="text-sm font-semibold text-ink">Notifications</h3>
+            <Link href="/notifications" className="text-xs font-medium text-amber">
               View all
             </Link>
           </div>
           <div className="max-h-80 overflow-y-auto">
             {items.length === 0 ? (
-              <p className="px-4 py-8 text-center text-sm text-zinc-500">
+              <p className="px-4 py-8 text-center text-sm text-ink/50">
                 No notifications yet.
               </p>
             ) : (
@@ -97,18 +97,18 @@ export function NotificationsBell() {
                 <div
                   key={n.id}
                   className={cn(
-                    "border-b border-zinc-800/60 px-4 py-3 last:border-0",
-                    !n.is_read && "bg-zinc-800/40",
+                    "border-b border-hairline/60 px-4 py-3 last:border-0",
+                    !n.is_read && "bg-surface-2/40",
                   )}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-medium text-zinc-100">{n.title}</p>
-                    <span className="text-[10px] text-zinc-500">
+                    <p className="text-sm font-medium text-ink">{n.title}</p>
+                    <span className="text-[10px] text-ink/50">
                       {formatDateTime(n.created_at)}
                     </span>
                   </div>
                   {n.body && (
-                    <p className="mt-0.5 text-xs text-zinc-500">{n.body}</p>
+                    <p className="mt-0.5 text-xs text-ink/50">{n.body}</p>
                   )}
                 </div>
               ))

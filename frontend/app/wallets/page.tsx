@@ -83,7 +83,7 @@ function WalletPanel() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-zinc-800 text-xs text-zinc-500">
+                <tr className="border-b border-hairline text-xs text-ink/50">
                   <th className="px-5 py-2 font-medium">Asset</th>
                   <th className="px-5 py-2 font-medium">Wallet</th>
                   <th className="px-5 py-2 text-right font-medium">Balance</th>
@@ -95,21 +95,21 @@ function WalletPanel() {
                 {(balances.data?.items ?? []).map((b) => (
                   <tr
                     key={`${b.asset_symbol}-${b.wallet_type}`}
-                    className="border-b border-zinc-800/60 last:border-0"
+                    className="border-b border-hairline/60 last:border-0"
                   >
-                    <td className="px-5 py-3 font-semibold text-zinc-100">
+                    <td className="px-5 py-3 font-semibold text-ink">
                       {b.asset_symbol}
                     </td>
-                    <td className="px-5 py-3 text-xs capitalize text-zinc-400">
+                    <td className="px-5 py-3 text-xs capitalize text-ink/60">
                       {b.wallet_type}
                     </td>
-                    <td className="px-5 py-3 text-right font-mono text-zinc-200">
+                    <td className="px-5 py-3 text-right font-mono text-ink/90">
                       {formatNumber(b.balance)}
                     </td>
-                    <td className="px-5 py-3 text-right font-mono text-emerald-400">
+                    <td className="px-5 py-3 text-right font-mono text-bull">
                       {formatNumber(b.available)}
                     </td>
-                    <td className="px-5 py-3 text-right font-mono text-amber-400">
+                    <td className="px-5 py-3 text-right font-mono text-amber">
                       {formatNumber(b.frozen)}
                     </td>
                   </tr>
@@ -118,7 +118,7 @@ function WalletPanel() {
                   <tr>
                     <td
                       colSpan={5}
-                      className="px-5 py-8 text-center text-sm text-zinc-500"
+                      className="px-5 py-8 text-center text-sm text-ink/50"
                     >
                       No balances.
                     </td>
@@ -134,7 +134,7 @@ function WalletPanel() {
             title="Transactions"
             subtitle="Deposit / withdrawal / trade ledger"
           />
-          <div className="flex flex-wrap items-center gap-3 border-b border-zinc-800 px-5 py-3">
+          <div className="flex flex-wrap items-center gap-3 border-b border-hairline px-5 py-3">
             <Select
               label=""
               className="w-36"
@@ -188,7 +188,7 @@ function WalletPanel() {
               <button
                 type="button"
                 onClick={() => setTxFilter({ type: "", asset: "", status: "" })}
-                className="cursor-pointer text-xs font-medium text-indigo-400 hover:text-indigo-300"
+                className="cursor-pointer text-xs font-medium text-amber hover:text-amber/80"
               >
                 Reset
               </button>
@@ -196,8 +196,8 @@ function WalletPanel() {
           </div>
           <div className="max-h-[420px] overflow-auto">
             <table className="w-full text-left text-sm">
-              <thead className="sticky top-0 bg-zinc-900">
-                <tr className="border-b border-zinc-800 text-xs text-zinc-500">
+              <thead className="sticky top-0 bg-surface">
+                <tr className="border-b border-hairline text-xs text-ink/50">
                   <th className="px-5 py-2 font-medium">Time</th>
                   <th className="px-5 py-2 font-medium">Type</th>
                   <th className="px-5 py-2 font-medium">Status</th>
@@ -212,12 +212,12 @@ function WalletPanel() {
                   return (
                     <tr
                       key={t.id}
-                      className="border-b border-zinc-800/60 last:border-0"
+                      className="border-b border-hairline/60 last:border-0"
                     >
-                      <td className="px-5 py-2 text-xs text-zinc-500">
+                      <td className="px-5 py-2 text-xs text-ink/50">
                         {formatDateTime(t.created_at)}
                       </td>
-                      <td className="px-5 py-2 text-xs capitalize text-zinc-300">
+                      <td className="px-5 py-2 text-xs capitalize text-ink/80">
                         {typeLabel}
                       </td>
                       <td className="px-5 py-2">
@@ -228,13 +228,13 @@ function WalletPanel() {
                       <td
                         className={cn(
                           "px-5 py-2 text-right font-mono",
-                          positive ? "text-emerald-400" : "text-rose-400",
+                          positive ? "text-bull" : "text-bear",
                         )}
                       >
                         {positive ? "+" : ""}
                         {formatNumber(t.delta)} {t.asset_symbol ?? ""}
                       </td>
-                      <td className="px-5 py-2 text-right text-xs text-zinc-500">
+                      <td className="px-5 py-2 text-right text-xs text-ink/50">
                         {t.note ?? "-"}
                       </td>
                     </tr>
@@ -244,7 +244,7 @@ function WalletPanel() {
                   <tr>
                     <td
                       colSpan={5}
-                      className="px-5 py-8 text-center text-sm text-zinc-500"
+                      className="px-5 py-8 text-center text-sm text-ink/50"
                     >
                       No transactions yet.
                     </td>
@@ -260,7 +260,7 @@ function WalletPanel() {
         <CardHeader
           title="Transfer"
           action={
-            <div className="flex rounded-lg border border-zinc-700 p-0.5">
+            <div className="flex rounded-[2px] border border-hairline p-0.5">
               {(["deposit", "withdraw", "transfer"] as const).map((m) => (
                 <button
                   key={m}
@@ -270,10 +270,10 @@ function WalletPanel() {
                     setFormSuccess(null);
                   }}
                   className={cn(
-                    "cursor-pointer rounded-md px-3 py-1 text-xs font-medium capitalize transition-colors",
+                    "cursor-pointer rounded-[2px] px-3 py-1 text-xs font-medium capitalize transition-colors",
                     mode === m
-                      ? "bg-indigo-600 text-white"
-                      : "text-zinc-400 hover:text-zinc-200",
+                      ? "bg-amber text-bg"
+                      : "text-ink/60 hover:text-ink/90",
                   )}
                 >
                   {m}
@@ -356,8 +356,8 @@ export default function WalletsPage() {
     <Protected>
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-zinc-50">Wallets</h1>
-          <p className="text-sm text-zinc-400">
+          <h1 className="text-2xl font-bold text-ink">Wallets</h1>
+          <p className="text-sm text-ink/60">
             Manage spot balances and deposit / withdraw funds for{" "}
             {user?.username}.
           </p>
