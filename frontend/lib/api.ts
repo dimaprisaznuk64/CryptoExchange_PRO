@@ -23,8 +23,11 @@ import type {
   User,
   VolumeReport,
 } from "@/lib/types";
+import { site } from "@/lib/site";
 
-export const API_URL = "https://cryptoexchange-backend.onrender.com";
+export const API_URL = site.apiUrl;
+/** Base for websocket connections (wss). */
+const WS_URL = API_URL.replace(/^https:\/\//, "wss://");
 
 export interface OrderFilter {
   status?: string;
@@ -349,8 +352,7 @@ export const api = {
 };
 
 export const getWsUrl = (pairs: string[]): string => {
-  const base = "wss://cryptoexchange-backend.onrender.com";
   const token = tokenStore.getAccess() ?? "";
   const params = new URLSearchParams({ token, pairs: pairs.join(",") });
-  return `${base}/ws/prices?${params.toString()}`;
+  return `${WS_URL}/ws/prices?${params.toString()}`;
 };

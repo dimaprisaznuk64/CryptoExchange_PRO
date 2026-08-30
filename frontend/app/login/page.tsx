@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { Alert, Button, Card, Input } from "@/components/ui";
+import { site } from "@/lib/site";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -28,7 +29,7 @@ export default function LoginPage() {
     <div className="mx-auto flex max-w-md flex-col justify-center px-4 py-16 sm:px-6">
       <h1 className="mb-1 text-2xl font-bold text-ink">Welcome back</h1>
       <p className="mb-8 text-sm text-ink/60">
-        Log in to your CryptoX account.
+        Log in to your {site.name} account.
       </p>
 
       <Card className="p-6">

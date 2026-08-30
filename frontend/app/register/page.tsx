@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { Alert, Button, Card, Input } from "@/components/ui";
+import { site } from "@/lib/site";
 
 export default function RegisterPage() {
   const { register } = useAuth();

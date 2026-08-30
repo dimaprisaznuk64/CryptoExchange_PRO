@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { NotificationsBell } from "@/components/NotificationsBell";
+import { site } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
@@ -35,10 +36,11 @@ export function Navbar() {
             className="flex items-center gap-2 text-base font-bold tracking-tight text-ink"
           >
             <span className="flex size-7 items-center justify-center rounded-[2px] bg-amber text-sm font-black text-bg">
-              C
+              {site.logoText}
             </span>
             <span className="hidden sm:inline">
-              Crypto<span className="text-amber">X</span>
+              {site.name.replace(site.accentLabel, "")}
+              <span className="text-amber">{site.accentLabel}</span>
             </span>
           </Link>
 
