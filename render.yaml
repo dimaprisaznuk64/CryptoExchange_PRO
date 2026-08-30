@@ -14,7 +14,7 @@ services:
     name: cryptoexchange-backend
     runtime: docker
     repo: https://github.com/dimaprisaznuk64/CryptoExchange_PRO.git
-    dockerfilePath: ./backend/Dockerfile
+    dockerfilePath: ./Dockerfile
     plan: free
     healthCheckPath: /api/v1/health
     envVars:
