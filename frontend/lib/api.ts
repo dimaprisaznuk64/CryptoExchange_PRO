@@ -24,8 +24,7 @@ import type {
   VolumeReport,
 } from "@/lib/types";
 
-export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "https://cryptoexchange-backend.onrender.com";
+export const API_URL = "https://cryptoexchange-backend.onrender.com";
 
 export interface OrderFilter {
   status?: string;
@@ -350,8 +349,7 @@ export const api = {
 };
 
 export const getWsUrl = (pairs: string[]): string => {
-  const base =
-    process.env.NEXT_PUBLIC_WS_URL ?? "wss://cryptoexchange-backend.onrender.com";
+  const base = "wss://cryptoexchange-backend.onrender.com";
   const token = tokenStore.getAccess() ?? "";
   const params = new URLSearchParams({ token, pairs: pairs.join(",") });
   return `${base}/ws/prices?${params.toString()}`;
