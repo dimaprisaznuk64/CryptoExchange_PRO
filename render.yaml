@@ -1,8 +1,12 @@
 # Render Blueprint — CryptoExchange_PRO
-# Creates backend Web Service (FastAPI) + Celery worker + Celery beat.
-# Postgres and Redis are external free providers (Neon / Upstash) and are
-# injected via env vars — set their values once in Render, mark them "sync: false"
+# Creates only the backend Web Service (FastAPI) on the free plan.
+# Postgres and Redis are external free providers (Neon / Upstash) injected
+# via env vars; values are set once in Render and marked "sync: false"
 # so they are not overwritten on blueprint re-deploys.
+#
+# Note: Background workers (Celery worker/beat) are NOT included because the
+# Render plan in use does not allow background workers. The API works without
+# them (Redis used for cache/rate-limit; TP/SL monitor runs in-process).
 
 services:
   # ---------- Backend API ----------
@@ -34,37 +38,3 @@ services:
         value: "https://<FRONTEND_URL_HERE>"
       - key: ALLOWED_HOSTS
         value: "*"
-
-  # ---------- Celery worker ----------
-  - type: worker
-    name: cryptoexchange-worker
-    runtime: docker
-    repo: https://github.com/dimaprisaznuk64/CryptoExchange_PRO.git
-    dockerfilePath: ./backend/Dockerfile.worker
-    plan: free
-    envVars:
-      - key: DATABASE_URL
-        sync: false
-      - key: REDIS_URL
-        sync: false
-      - key: CELERY_BROKER_URL
-        sync: false
-      - key: CELERY_RESULT_BACKEND
-        sync: false
-      - key: SECRET_KEY
-        sync: false
-
-  # ---------- Celery beat ----------
-  - type: worker
-    name: cryptoexchange-beat
-    runtime: docker
-    repo: https://github.com/dimaprisaznuk64/CryptoExchange_PRO.git
-    dockerfilePath: ./backend/Dockerfile.beat
-    plan: free
-    envVars:
-      - key: REDIS_URL
-        sync: false
-      - key: CELERY_BROKER_URL
-        sync: false
-      - key: CELERY_RESULT_BACKEND
-        sync: false
