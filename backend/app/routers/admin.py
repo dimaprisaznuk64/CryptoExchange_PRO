@@ -9,6 +9,7 @@ from app.dependencies.auth import get_current_user, require_admin
 from app.models.user import User
 from app.schemas.admin import (
     AdminOrderList,
+    AdminStats,
     AdminTradeList,
     AdminUserDetail,
     AdminUserList,
@@ -134,3 +135,16 @@ async def list_all_trades(
         offset=offset,
     )
     return AdminTradeList(**data)
+
+
+@router.get(
+    "/stats",
+    response_model=AdminStats,
+    dependencies=[Depends(rate_limit_user("admin_stats", limit=120, window=60))],
+)
+async def admin_stats(
+    days: int = Query(30, ge=1, le=90),
+    db: AsyncSession = Depends(get_db),
+):
+    data = await admin_service.get_admin_stats(db, days=days)
+    return AdminStats(**data)

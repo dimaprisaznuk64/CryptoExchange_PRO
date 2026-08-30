@@ -209,3 +209,35 @@ async def test_admin_trades_list(client, db_session):
     resp4 = await client.get("/api/v1/admin/trades", params={"user": "adm-1"}, headers=headers["admin"])
     assert resp4.status_code == 200
     assert resp4.json()["total"] == 0
+
+
+@pytest.mark.asyncio
+async def test_admin_stats_requires_admin(client, db_session):
+    headers = await _seed(client, db_session)
+    resp = await client.get("/api/v1/admin/stats", headers=headers["user"])
+    assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_admin_stats(client, db_session):
+    headers = await _seed(client, db_session)
+    await client.post("/api/v1/wallets/deposit", json={"asset_symbol": "USDT", "amount": 10000}, headers=headers["user"])
+    await client.post("/api/v1/orders", json={"pair": "BTC/USDT", "side": "buy", "qty": 0.05}, headers=headers["user"])
+
+    resp = await client.get("/api/v1/admin/stats", headers=headers["admin"])
+    assert resp.status_code == 200
+    body = resp.json()
+    totals = body["totals"]
+    assert totals["users"] == 2
+    assert totals["active_users"] == 2
+    assert totals["orders"] >= 1
+    assert totals["trades"] >= 1
+    assert totals["total_spot_usd"] > 0
+    assert totals["today_trades"] >= 1
+    assert totals["today_volume_usd"] > 0
+
+    pairs = {p["pair"]: p for p in body["volume_by_pair"]}
+    assert "BTC/USDT" in pairs
+    assert pairs["BTC/USDT"]["volume_notional"] > 0
+    assert pairs["BTC/USDT"]["trades"] >= 1
+    assert body["volume_timeline"], "timeline should not be empty"

@@ -52,6 +52,17 @@ export function Navbar() {
             {user?.role === "admin" && (
               <>
                 <Link
+                  href="/admin"
+                  className={cn(
+                    "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
+                    pathname === "/admin"
+                      ? "bg-zinc-800 text-zinc-50"
+                      : "text-zinc-400 hover:text-zinc-200",
+                  )}
+                >
+                  Dashboard
+                </Link>
+                <Link
                   href="/admin/users"
                   className={cn(
                     "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
@@ -157,6 +168,18 @@ export function Navbar() {
           ))}
           {user?.role === "admin" && (
             <>
+              <Link
+                href="/admin"
+                onClick={() => setMobileOpen(false)}
+                className={cn(
+                  "block rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                  pathname === "/admin"
+                    ? "bg-zinc-800 text-zinc-50"
+                    : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200",
+                )}
+              >
+                Dashboard
+              </Link>
               <Link
                 href="/admin/users"
                 onClick={() => setMobileOpen(false)}

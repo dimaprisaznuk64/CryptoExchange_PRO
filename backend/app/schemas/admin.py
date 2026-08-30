@@ -86,3 +86,35 @@ class AdminTradeItem(BaseModel):
 class AdminTradeList(BaseModel):
     total: int
     trades: list[AdminTradeItem]
+
+
+class AdminDashboardTotals(BaseModel):
+    users: int
+    active_users: int
+    orders: int
+    open_orders: int
+    trades: int
+    total_spot_usd: float
+    today_trades: int
+    today_volume_usd: float
+
+
+class AdminPairVolume(BaseModel):
+    pair: str
+    buy_notional: float
+    sell_notional: float
+    volume_notional: float
+    trades: int
+
+
+class AdminVolumeTimelinePoint(BaseModel):
+    date: str
+    volume_usd: float
+    trades: int
+
+
+class AdminStats(BaseModel):
+    days: int
+    totals: AdminDashboardTotals
+    volume_by_pair: list[AdminPairVolume]
+    volume_timeline: list[AdminVolumeTimelinePoint]

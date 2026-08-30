@@ -1,6 +1,7 @@
 import type {
   AccessTokenResponse,
   AdminOrderList,
+  AdminStats,
   AdminTradeList,
   AdminUserDetail,
   AdminUserList,
@@ -339,6 +340,11 @@ export const api = {
   }) =>
     apiFetch<AdminTradeList>(
       `/api/v1/admin/trades${buildQuery(params ?? {})}`,
+      { auth: true },
+    ),
+  adminGetStats: (days?: number) =>
+    apiFetch<AdminStats>(
+      `/api/v1/admin/stats${buildQuery(days ? { days } : {})}`,
       { auth: true },
     ),
 };

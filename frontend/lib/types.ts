@@ -291,3 +291,35 @@ export interface AdminTradeList {
   total: number;
   trades: AdminTradeItem[];
 }
+
+export interface AdminDashboardTotals {
+  users: number;
+  active_users: number;
+  orders: number;
+  open_orders: number;
+  trades: number;
+  total_spot_usd: number;
+  today_trades: number;
+  today_volume_usd: number;
+}
+
+export interface AdminPairVolume {
+  pair: string;
+  buy_notional: number;
+  sell_notional: number;
+  volume_notional: number;
+  trades: number;
+}
+
+export interface AdminVolumeTimelinePoint {
+  date: string;
+  volume_usd: number;
+  trades: number;
+}
+
+export interface AdminStats {
+  days: number;
+  totals: AdminDashboardTotals;
+  volume_by_pair: AdminPairVolume[];
+  volume_timeline: AdminVolumeTimelinePoint[];
+}
