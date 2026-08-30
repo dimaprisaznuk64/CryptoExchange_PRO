@@ -40,8 +40,7 @@ services:
     name: cryptoexchange-worker
     runtime: docker
     repo: https://github.com/dimaprisaznuk64/CryptoExchange_PRO.git
-    dockerfilePath: ./backend/Dockerfile
-    command: celery -A app.tasks worker --concurrency=1 --loglevel=info
+    dockerfilePath: ./backend/Dockerfile.worker
     plan: free
     envVars:
       - key: DATABASE_URL
@@ -60,8 +59,7 @@ services:
     name: cryptoexchange-beat
     runtime: docker
     repo: https://github.com/dimaprisaznuk64/CryptoExchange_PRO.git
-    dockerfilePath: ./backend/Dockerfile
-    command: celery -A app.tasks beat --loglevel=info
+    dockerfilePath: ./backend/Dockerfile.beat
     plan: free
     envVars:
       - key: REDIS_URL
