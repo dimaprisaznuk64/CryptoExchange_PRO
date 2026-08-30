@@ -54,8 +54,13 @@ Python 3.13, FastAPI, SQLAlchemy (async), PostgreSQL, Redis, Celery, JWT, React 
 
 ## Деплой
 
-Backend — **Docker** (VPS), Frontend — **Vercel**. Детальна інструкція:
+Backend — **Docker** (VPS / Render), Frontend — **Vercel**. Детальна інструкція:
 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
+- **GitHub**: `https://github.com/dimaprisaznuk64/CryptoExchange_PRO` (приватний, гілка `master`)
+- **CI/CD**: GitHub Actions (`.github/workflows/backend-build.yml`) — на push у `backend/**` збирає Docker-образ і пушить у GHCR (`ghcr.io/dimaprisaznuk64/cryptoexchange_pro-backend`). Запуск вручну: `gh workflow run backend-build.yml`.
+- **Render Blueprint**: `render.yaml` — web (backend API), 2 worker (celery worker + beat), managed Postgres + Redis.
+- **Vercel**: імпорт репо, Root Directory = `frontend`, env `NEXT_PUBLIC_API_URL` / `NEXT_PUBLIC_WS_URL`.
 
 ## Стан проєкту
 
