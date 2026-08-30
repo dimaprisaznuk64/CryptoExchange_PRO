@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getWsUrl, tokenStore } from "@/lib/api";
 import type { BookSnapshot, PriceMessage } from "@/lib/types";
 
@@ -11,6 +11,13 @@ export interface RealtimeState {
   book: BookSnapshot | null;
   lastUpdate: number;
 }
+
+// Backend streams price ticks every ~50ms (20/sec). Re-rendering the whole
+// trade page that often (heavy SVG candlestick chart, order book, forms)
+// overloads the DOM/CPU on mobile within seconds and crashes the tab.
+// We buffer incoming messages in a ref and flush to React state on a fixed
+// interval instead, so the UI updates smoothly without a render storm.
+const FLUSH_INTERVAL_MS = 250;
 
 export function useRealtimePrices(pairs: string[]) {
   const [state, setState] = useState<RealtimeState>({
@@ -25,6 +32,15 @@ export function useRealtimePrices(pairs: string[]) {
   const [reconnect, setReconnect] = useState(0);
   const hasToken = typeof window !== "undefined" && Boolean(tokenStore.getAccess());
 
+  // Pending updates buffered between flushes.
+  const pendingRef = useRef<{
+    connected?: boolean;
+    hello?: string;
+    prices?: Record<string, number>;
+    book?: BookSnapshot;
+    dirty: boolean;
+  }>({ dirty: false });
+
   useEffect(() => {
     if (pairs.length === 0) return;
     if (!tokenStore.getAccess()) return;
@@ -36,6 +52,19 @@ export function useRealtimePrices(pairs: string[]) {
     const MAX_RECONNECTS = 5;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
+    const flushTimer = setInterval(() => {
+      const pending = pendingRef.current;
+      if (!pending.dirty) return;
+      setState((s) => ({
+        connected: pending.connected ?? s.connected,
+        hello: pending.hello ?? s.hello,
+        prices: pending.prices ? { ...s.prices, ...pending.prices } : s.prices,
+        book: pending.book ?? s.book,
+        lastUpdate: Date.now(),
+      }));
+      pendingRef.current = { dirty: false };
+    }, FLUSH_INTERVAL_MS);
+
     const connect = () => {
       if (closed) return;
       connectAttempts += 1;
@@ -46,7 +75,8 @@ export function useRealtimePrices(pairs: string[]) {
       ws = new WebSocket(url);
 
       ws.onopen = () => {
-        setState((s) => ({ ...s, connected: true }));
+        pendingRef.current.connected = true;
+        pendingRef.current.dirty = true;
       };
 
       ws.onmessage = (event) => {
@@ -56,20 +86,18 @@ export function useRealtimePrices(pairs: string[]) {
             [key: string]: unknown;
           };
           if (msg.type === "hello") {
-            setState((s) => ({ ...s, hello: String(msg.user ?? "") }));
+            pendingRef.current.hello = String(msg.user ?? "");
+            pendingRef.current.dirty = true;
           } else if (msg.type === "price") {
             const price = msg as unknown as PriceMessage;
-            setState((s) => ({
-              ...s,
-              prices: { ...s.prices, [price.pair]: price.price },
-              lastUpdate: Date.now(),
-            }));
+            pendingRef.current.prices = {
+              ...pendingRef.current.prices,
+              [price.pair]: price.price,
+            };
+            pendingRef.current.dirty = true;
           } else if (msg.type === "book") {
-            setState((s) => ({
-              ...s,
-              book: msg as unknown as BookSnapshot,
-              lastUpdate: Date.now(),
-            }));
+            pendingRef.current.book = msg as unknown as BookSnapshot;
+            pendingRef.current.dirty = true;
           }
         } catch {
           /* ignore malformed frames */
@@ -101,6 +129,7 @@ export function useRealtimePrices(pairs: string[]) {
     return () => {
       closed = true;
       if (reconnectTimer) clearTimeout(reconnectTimer);
+      clearInterval(flushTimer);
       ws?.close();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

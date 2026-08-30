@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { useFetch } from "@/hooks/useFetch";
 import { api } from "@/lib/api";
 import { Card } from "@/components/ui";
@@ -10,7 +11,7 @@ interface MarketStatsPanelProps {
   pair: string;
 }
 
-export function MarketStatsPanel({ pair }: MarketStatsPanelProps) {
+export const MarketStatsPanel = memo(function MarketStatsPanel({ pair }: MarketStatsPanelProps) {
   const { data: stats } = useFetch(() => api.getMarketStats(pair), [pair]);
 
   if (!stats) return null;
@@ -55,4 +56,4 @@ export function MarketStatsPanel({ pair }: MarketStatsPanelProps) {
       </div>
     </Card>
   );
-}
+});

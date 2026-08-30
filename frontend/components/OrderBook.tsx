@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import type { BookLevel } from "@/lib/types";
 import { formatNumber, formatPrice } from "@/lib/format";
 
@@ -11,7 +11,7 @@ interface OrderBookProps {
   spread?: number;
 }
 
-export function OrderBook({
+export const OrderBook = memo(function OrderBook({
   levels,
   bestBid,
   bestAsk,
@@ -89,4 +89,4 @@ export function OrderBook({
       </div>
     </div>
   );
-}
+});

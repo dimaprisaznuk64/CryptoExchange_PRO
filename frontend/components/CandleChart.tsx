@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 import type { Candle } from "@/lib/types";
 import { formatPrice } from "@/lib/format";
 
@@ -9,7 +9,7 @@ interface PriceChartProps {
   height?: number;
 }
 
-export function CandleChart({ candles, height = 320 }: PriceChartProps) {
+export const CandleChart = memo(function CandleChart({ candles, height = 320 }: PriceChartProps) {
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
 
   const { points, width, bodyW, step } = useMemo(() => {
@@ -212,4 +212,4 @@ export function CandleChart({ candles, height = 320 }: PriceChartProps) {
       </svg>
     </div>
   );
-}
+});
