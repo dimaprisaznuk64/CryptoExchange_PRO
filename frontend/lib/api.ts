@@ -25,9 +25,12 @@ import type {
 } from "@/lib/types";
 import { site } from "@/lib/site";
 
-export const API_URL = site.apiUrl;
+export const API_URL =
+  process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") || site.apiUrl;
 /** Base for websocket connections (wss). */
-const WS_URL = API_URL.replace(/^https:\/\//, "wss://");
+const WS_URL =
+  process.env.NEXT_PUBLIC_WS_URL?.replace(/\/+$/, "") ||
+  API_URL.replace(/^https:\/\//, "wss://");
 
 export interface OrderFilter {
   status?: string;
