@@ -22,11 +22,12 @@ from app.core.security import (
     decode_token,
     blacklist_token,
     is_token_blacklisted,
+    remaining_ttl,
 )
 from app.dependencies.auth import get_current_user
 from app.models.transaction import TransactionType
 from app.models.user import User, UserRole
-from app.schemas.auth import RegisterRequest, LoginRequest, RefreshRequest, TokenResponse, AccessTokenResponse
+from app.schemas.auth import RegisterRequest, LoginRequest, RefreshRequest, LogoutRequest, TokenResponse, AccessTokenResponse
 from app.schemas.user import UserResponse
 from app.services.wallet import credit
 
@@ -183,10 +184,20 @@ async def refresh(data: RefreshRequest, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/logout", status_code=204)
-async def logout(data: RefreshRequest):
-    payload = decode_token(data.refresh_token, expected_type="refresh")
-    if payload is not None:
-        await blacklist_token(payload.get("jti", ""))
+async def logout(data: LogoutRequest):
+    refresh_payload = decode_token(data.refresh_token, expected_type="refresh")
+    if refresh_payload is not None:
+        await blacklist_token(refresh_payload.get("jti", ""))
+
+    # Also revoke the current access token so it can't be used for the rest
+    # of its (short) lifetime after logout.
+    if data.access_token:
+        access_payload = decode_token(data.access_token, expected_type="access")
+        if access_payload is not None:
+            await blacklist_token(
+                access_payload.get("jti", ""),
+                ttl=remaining_ttl(access_payload),
+            )
 
 
 @router.get("/me", response_model=UserResponse)

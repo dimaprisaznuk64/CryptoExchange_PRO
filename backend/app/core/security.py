@@ -16,17 +16,27 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 BLACKLIST_PREFIX = "crypto:token:blacklist:"
 
 
-async def blacklist_token(jti: str) -> None:
+async def blacklist_token(jti: str, ttl: int | None = None) -> None:
     from app.core.cache import get_redis
     redis = await get_redis()
     if not redis:
         logger.warning("Redis unavailable, token %s not blacklisted", jti)
         return
-    ttl = settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400
+    if ttl is None:
+        ttl = settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400
     try:
         await redis.set(f"{BLACKLIST_PREFIX}{jti}", "1", ex=ttl)
     except Exception as e:
         logger.warning("Redis blacklist set failed: %s", e)
+
+
+def remaining_ttl(payload) -> int:
+    """Seconds until a decoded token expires (>=0)."""
+    exp = payload.get("exp")
+    if not exp:
+        return 0
+    now = datetime.now(timezone.utc).timestamp()
+    return max(0, int(exp - now))
 
 
 async def is_token_blacklisted(jti: str) -> bool:

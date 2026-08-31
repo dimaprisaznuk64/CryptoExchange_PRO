@@ -105,11 +105,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(async () => {
     const refresh = tokenStore.getRefresh();
+    const access = tokenStore.getAccess();
     tokenStore.clear();
     setUser(null);
     if (refresh) {
       try {
-        await api.logout(refresh);
+        await api.logout(refresh, access);
       } catch {
         /* ignore logout errors */
       }

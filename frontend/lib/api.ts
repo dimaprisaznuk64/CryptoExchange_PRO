@@ -196,10 +196,10 @@ export const api = {
       method: "POST",
       body: { email, password },
     }),
-  logout: (refreshToken: string) =>
+  logout: (refreshToken: string, accessToken?: string | null) =>
     apiFetch<void>("/api/v1/auth/logout", {
       method: "POST",
-      body: { refresh_token: refreshToken },
+      body: { refresh_token: refreshToken, access_token: accessToken ?? undefined },
     }),
   me: () => apiFetch<User>("/api/v1/auth/me", { auth: true }),
 

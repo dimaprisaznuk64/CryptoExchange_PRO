@@ -162,3 +162,31 @@ async def test_logout_blacklists_refresh(client, db_session):
     payload = decode_token(refresh, "refresh")
     from app.core.security import is_token_blacklisted
     assert await is_token_blacklisted(payload["jti"]) is True
+
+
+@pytest.mark.asyncio
+async def test_logout_also_revokes_access_token(client, db_session):
+    from app.core.security import (
+        create_access_token,
+        create_refresh_token,
+        decode_token,
+        is_token_blacklisted,
+    )
+    await _create_user(db_session, "u-logout2", "log2@test.com", "logoutuser2")
+    access = create_access_token("u-logout2")
+    refresh = create_refresh_token("u-logout2")
+
+    resp = await client.post(
+        "/api/v1/auth/logout",
+        json={"refresh_token": refresh, "access_token": access},
+    )
+    assert resp.status_code == 204
+
+    access_payload = decode_token(access, "access")
+    assert await is_token_blacklisted(access_payload["jti"]) is True
+
+    # The revoked access token must no longer authenticate.
+    me = await client.get(
+        "/api/v1/auth/me", headers={"Authorization": f"Bearer {access}"}
+    )
+    assert me.status_code == 401
