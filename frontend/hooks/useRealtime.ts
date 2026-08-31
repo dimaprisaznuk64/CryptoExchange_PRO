@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { getWsUrl, tokenStore } from "@/lib/api";
+import { api, getWsUrl, tokenStore } from "@/lib/api";
 import type { BookSnapshot, PriceMessage } from "@/lib/types";
+
+export type RealtimeMode = "ws" | "polling";
 
 export interface RealtimeState {
   connected: boolean;
+  mode: RealtimeMode;
   hello: string | null;
   prices: Record<string, number>;
   book: BookSnapshot | null;
@@ -19,9 +22,15 @@ export interface RealtimeState {
 // interval instead, so the UI updates smoothly without a render storm.
 const FLUSH_INTERVAL_MS = 250;
 
+// Render free kills long-lived WebSockets, so after a bounded number of failed
+// connection attempts we degrade to REST polling of tickers + order book.
+const MAX_RECONNECTS = 3;
+const POLL_INTERVAL_MS = 2000;
+
 export function useRealtimePrices(pairs: string[]) {
   const [state, setState] = useState<RealtimeState>({
     connected: false,
+    mode: "ws",
     hello: null,
     prices: {},
     book: null,
@@ -32,9 +41,14 @@ export function useRealtimePrices(pairs: string[]) {
   const [reconnect, setReconnect] = useState(0);
   const hasToken = typeof window !== "undefined" && Boolean(tokenStore.getAccess());
 
+  // Polling is driven from inside the effect via an interval; we keep a ref so
+  // the cleanup can always tear it down regardless of which mode is active.
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   // Pending updates buffered between flushes.
   const pendingRef = useRef<{
     connected?: boolean;
+    mode?: RealtimeMode;
     hello?: string;
     prices?: Record<string, number>;
     book?: BookSnapshot;
@@ -49,14 +63,61 @@ export function useRealtimePrices(pairs: string[]) {
     let ws: WebSocket | null = null;
     let closed = false;
     let connectAttempts = 0;
-    const MAX_RECONNECTS = 5;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const stopPolling = () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+    };
+
+    const startPolling = () => {
+      stopPolling();
+      pendingRef.current.connected = true;
+      pendingRef.current.mode = "polling";
+      pendingRef.current.dirty = true;
+
+      const tick = async () => {
+        try {
+          const tickers = await api.getTickers();
+          const prices: Record<string, number> = {};
+          for (const t of tickers) {
+            if (pairs.includes(t.pair)) prices[t.pair] = t.last;
+          }
+          if (Object.keys(prices).length > 0) {
+            pendingRef.current.prices = {
+              ...pendingRef.current.prices,
+              ...prices,
+            };
+            pendingRef.current.dirty = true;
+          }
+        } catch {
+          /* transient network error — retry next tick */
+        }
+
+        // Rest the order book ladder too.
+        if (pairs.length > 0) {
+          try {
+            const book = await api.getDepth(pairs[0]);
+            pendingRef.current.book = book;
+            pendingRef.current.dirty = true;
+          } catch {
+            /* retry next tick */
+          }
+        }
+      };
+
+      void tick();
+      pollRef.current = setInterval(tick, POLL_INTERVAL_MS);
+    };
 
     const flushTimer = setInterval(() => {
       const pending = pendingRef.current;
       if (!pending.dirty) return;
       setState((s) => ({
         connected: pending.connected ?? s.connected,
+        mode: pending.mode ?? s.mode,
         hello: pending.hello ?? s.hello,
         prices: pending.prices ? { ...s.prices, ...pending.prices } : s.prices,
         book: pending.book ?? s.book,
@@ -69,13 +130,17 @@ export function useRealtimePrices(pairs: string[]) {
       if (closed) return;
       connectAttempts += 1;
       if (connectAttempts > MAX_RECONNECTS) {
+        // Give up on WS for good and fall back to REST polling.
         setState((s) => ({ ...s, connected: false }));
+        startPolling();
         return;
       }
       ws = new WebSocket(url);
 
       ws.onopen = () => {
+        stopPolling();
         pendingRef.current.connected = true;
+        pendingRef.current.mode = "ws";
         pendingRef.current.dirty = true;
       };
 
@@ -112,6 +177,9 @@ export function useRealtimePrices(pairs: string[]) {
             reconnectTimer = null;
             setReconnect((r) => r + 1);
           }, delay);
+        } else if (!closed) {
+          // Connection was never established; stop retrying and poll instead.
+          startPolling();
         }
       };
 
@@ -130,6 +198,7 @@ export function useRealtimePrices(pairs: string[]) {
       closed = true;
       if (reconnectTimer) clearTimeout(reconnectTimer);
       clearInterval(flushTimer);
+      stopPolling();
       ws?.close();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

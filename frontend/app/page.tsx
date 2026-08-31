@@ -90,12 +90,18 @@ export default function HomePage() {
       <section>
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-xl font-bold text-ink">Markets</h2>
-          {live.connected && (
-            <span className="flex items-center gap-1.5 text-xs text-bull">
-              <span className="size-1.5 animate-pulse rounded-full bg-bull" />
-              live
-            </span>
-          )}
+          {live.connected &&
+            (live.mode === "ws" ? (
+              <span className="flex items-center gap-1.5 text-xs text-bull">
+                <span className="size-1.5 animate-pulse rounded-full bg-bull" />
+                live
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5 text-xs text-amber">
+                <span className="size-1.5 animate-pulse rounded-full bg-amber" />
+                synced
+              </span>
+            ))}
         </div>
 
         <Card>

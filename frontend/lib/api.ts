@@ -7,6 +7,7 @@ import type {
   AdminUserList,
   AdminUserUpdate,
   BalanceResponse,
+  BookSnapshot,
   Candle,
   MarketStats,
   Notification,
@@ -213,6 +214,8 @@ export const api = {
     ),
   getMarketStats: (symbol: string) =>
     apiFetch<MarketStats>(`/api/v1/market/stats/${encodeURIComponent(symbol)}`),
+  getDepth: (symbol: string) =>
+    apiFetch<BookSnapshot>(`/api/v1/market/depth/${encodeURIComponent(symbol)}`),
 
   // wallets
   getBalances: () => apiFetch<BalanceResponse>("/api/v1/wallets/balances", { auth: true }),

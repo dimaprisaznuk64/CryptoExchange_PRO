@@ -121,3 +121,24 @@ async def test_stats_24h_unknown_pair_404(client, db_session):
     await seed_catalog(db_session)
     resp = await client.get("/api/v1/market/stats/DOGE/BTC")
     assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_depth_snapshot(client, db_session):
+    await seed_catalog(db_session)
+    resp = await client.get("/api/v1/market/depth/BTC/USDT")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["pair"] == "BTC/USDT"
+    assert data["best_bid"] > 0
+    assert data["best_ask"] >= data["best_bid"]
+    assert "levels" in data and len(data["levels"]) > 0
+    level = data["levels"][0]
+    assert level["bid"] > 0 and level["ask"] > 0
+
+
+@pytest.mark.asyncio
+async def test_depth_unknown_pair_404(client, db_session):
+    await seed_catalog(db_session)
+    resp = await client.get("/api/v1/market/depth/DOGE/BTC")
+    assert resp.status_code == 404

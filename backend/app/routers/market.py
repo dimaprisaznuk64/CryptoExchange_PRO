@@ -15,6 +15,7 @@ from app.schemas.market import (
     MarketStatsResponse,
 )
 from app.services import market as market_service
+from app.services.depth import order_book
 
 router = APIRouter(prefix="/market", tags=["market"])
 
@@ -77,6 +78,17 @@ async def get_stats_24h(symbol: str, db: AsyncSession = Depends(get_db)):
     await _get_pair(db, symbol)
     base, quote = symbol.split("/")
     return await market_service.get_stats_24h_cached(symbol, base, quote)
+
+
+@router.get(
+    "/depth/{symbol:path}",
+    dependencies=[Depends(rate_limit("market_depth", limit=120, window=60))],
+)
+async def get_depth(symbol: str, db: AsyncSession = Depends(get_db)):
+    """Order book snapshot over HTTP — REST fallback when WebSocket (which
+    Render free kills) is unavailable on the client."""
+    await _get_pair(db, symbol)
+    return await order_book(symbol)
 
 
 @router.get(
