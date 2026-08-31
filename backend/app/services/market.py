@@ -9,14 +9,17 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.trading_pair import TradingPair
-from app.models.asset import Asset
 from app.core.cache import cache_get, cache_set
+from app.services import binance_client
 
 logger = logging.getLogger(__name__)
 
 # TTL for Redis-cached market data (fall back to in-memory compute when Redis is down)
-TICKERS_CACHE_TTL = 30
+TICKERS_CACHE_TTL = 5
 PAIRS_CACHE_TTL = 60
+BINANCE_24HR_TTL = 3
+BINANCE_PRICE_TTL = 2
+BINANCE_KLINES_TTL = 15
 
 # Deterministic base prices (simulated market_data feed)
 BASE_PRICES = {
@@ -56,6 +59,35 @@ def _live_price(pair_symbol: str, ts: datetime) -> Decimal:
     return base * (Decimal("1") + Decimal(str(drift)))
 
 
+async def _binance_24hr_cached(binance_sym: str) -> dict | None:
+    """24hr ticker payload from Binance, Redis-cached for a few seconds so
+    every connected client/pair doesn't trigger its own upstream call."""
+    cache_key = f"market:binance:24hr:{binance_sym}"
+    cached = await cache_get(cache_key)
+    if cached is not None:
+        return cached
+    data = await binance_client.fetch_24hr(binance_sym)
+    if data is not None:
+        await cache_set(cache_key, data, BINANCE_24HR_TTL)
+    return data
+
+
+async def get_live_price_async(pair_symbol: str) -> Decimal:
+    """Best-effort real price from Binance; falls back to the deterministic
+    simulated feed if Binance is unreachable (rate limit, geo-block, etc.)."""
+    binance_sym = binance_client.binance_symbol(pair_symbol)
+    if binance_sym:
+        cache_key = f"market:binance:price:{binance_sym}"
+        cached = await cache_get(cache_key)
+        if cached is not None:
+            return Decimal(str(cached))
+        price = await binance_client.fetch_price(binance_sym)
+        if price is not None:
+            await cache_set(cache_key, price, BINANCE_PRICE_TTL)
+            return Decimal(str(price))
+    return _current_price(pair_symbol)
+
+
 async def list_pairs(db: AsyncSession) -> list[TradingPair]:
     result = await db.execute(
         select(TradingPair)
@@ -74,6 +106,7 @@ async def _pair_symbols(db: AsyncSession) -> list[str]:
 
 
 def get_ticker(pair_symbol: str, base: Decimal, quote: Decimal) -> dict:
+    """Deterministic simulated ticker — fallback when Binance is unreachable."""
     price = _current_price(pair_symbol)
     open_price = _price_at(pair_symbol, datetime.now(UTC) - timedelta(hours=24))
     change = (price - open_price) / open_price if open_price else Decimal("0")
@@ -95,10 +128,7 @@ def get_ticker(pair_symbol: str, base: Decimal, quote: Decimal) -> dict:
 
 
 def get_stats_24h(pair_symbol: str, base: str, quote: str) -> dict:
-    """Richer 24h market stats (OHLC, change %, volume in quote and base, trade count).
-
-    Deterministic simulated feed, consistent with get_ticker/get_ohlc.
-    """
+    """Deterministic simulated 24h stats — fallback when Binance is unreachable."""
     now = datetime.now(UTC)
     open_price = _price_at(pair_symbol, now - timedelta(hours=24))
     close_price = _current_price(pair_symbol)
@@ -126,11 +156,58 @@ def get_stats_24h(pair_symbol: str, base: str, quote: str) -> dict:
     }
 
 
+async def _build_ticker(pair_symbol: str, base: str, quote: str) -> dict:
+    binance_sym = binance_client.binance_symbol(pair_symbol)
+    if binance_sym:
+        data = await _binance_24hr_cached(binance_sym)
+        if data is not None:
+            try:
+                return {
+                    "pair": pair_symbol,
+                    "base_asset": base,
+                    "quote_asset": quote,
+                    "last": float(data["lastPrice"]),
+                    "open_24h": float(data["openPrice"]),
+                    "high_24h": float(data["highPrice"]),
+                    "low_24h": float(data["lowPrice"]),
+                    "change_24h": float(data["priceChangePercent"]) / 100,
+                    "volume_24h": float(data["quoteVolume"]),
+                }
+            except (KeyError, ValueError, TypeError) as e:
+                logger.warning("Binance 24hr parse failed for %s: %s", pair_symbol, e)
+    return get_ticker(pair_symbol, base, quote)
+
+
+async def _build_stats_24h(pair_symbol: str, base: str, quote: str) -> dict:
+    binance_sym = binance_client.binance_symbol(pair_symbol)
+    if binance_sym:
+        data = await _binance_24hr_cached(binance_sym)
+        if data is not None:
+            try:
+                return {
+                    "pair": pair_symbol,
+                    "base_asset": base,
+                    "quote_asset": quote,
+                    "last": float(data["lastPrice"]),
+                    "open_24h": float(data["openPrice"]),
+                    "high_24h": float(data["highPrice"]),
+                    "low_24h": float(data["lowPrice"]),
+                    "close_24h": float(data["lastPrice"]),
+                    "change_24h": float(data["priceChangePercent"]) / 100,
+                    "volume_24h": float(data["quoteVolume"]),
+                    "volume_base_24h": float(data["volume"]),
+                    "trades_24h": int(data["count"]),
+                }
+            except (KeyError, ValueError, TypeError) as e:
+                logger.warning("Binance 24hr parse failed for %s: %s", pair_symbol, e)
+    return get_stats_24h(pair_symbol, base, quote)
+
+
 async def get_stats_24h_cached(pair_symbol: str, base: str, quote: str) -> dict:
     cached = await cache_get(f"market:stats24:{pair_symbol}")
     if cached is not None:
         return cached
-    stats = get_stats_24h(pair_symbol, base, quote)
+    stats = await _build_stats_24h(pair_symbol, base, quote)
     await cache_set(f"market:stats24:{pair_symbol}", stats, TICKERS_CACHE_TTL)
     return stats
 
@@ -140,7 +217,7 @@ async def get_ticker_cached(pair_symbol: str, base: str, quote: str) -> dict:
     cached = await cache_get(f"market:ticker:{pair_symbol}")
     if cached is not None:
         return cached
-    ticker = get_ticker(pair_symbol, base, quote)
+    ticker = await _build_ticker(pair_symbol, base, quote)
     await cache_set(f"market:ticker:{pair_symbol}", ticker, TICKERS_CACHE_TTL)
     return ticker
 
@@ -157,13 +234,13 @@ async def get_all_tickers(db: AsyncSession) -> list[dict]:
         pair = await db.execute(select(TradingPair).where(TradingPair.symbol == s))
         pair_obj = pair.scalar_one_or_none()
         if pair_obj is not None:
-            result.append(get_ticker(s, base, quote))
+            result.append(await _build_ticker(s, base, quote))
 
     await cache_set("market:tickers", result, TICKERS_CACHE_TTL)
     return result
 
 
-async def get_ohlc(db: AsyncSession, pair_symbol: str, interval_minutes: int = 5, limit: int = 100) -> list[dict]:
+def _simulated_ohlc(pair_symbol: str, interval_minutes: int, limit: int) -> list[dict]:
     now = datetime.now(UTC)
     candles = []
     for i in range(limit - 1, -1, -1):
@@ -180,3 +257,32 @@ async def get_ohlc(db: AsyncSession, pair_symbol: str, interval_minutes: int = 5
             }
         )
     return candles
+
+
+async def get_ohlc(db: AsyncSession, pair_symbol: str, interval_minutes: int = 5, limit: int = 100) -> list[dict]:
+    binance_sym = binance_client.binance_symbol(pair_symbol)
+    if binance_sym:
+        interval_str = binance_client.INTERVAL_MAP.get(interval_minutes)
+        if interval_str:
+            cache_key = f"market:binance:klines:{binance_sym}:{interval_str}:{limit}"
+            raw = await cache_get(cache_key)
+            if raw is None:
+                raw = await binance_client.fetch_klines(binance_sym, interval_str, limit)
+                if raw is not None:
+                    await cache_set(cache_key, raw, BINANCE_KLINES_TTL)
+            if raw:
+                try:
+                    return [
+                        {
+                            "time": datetime.fromtimestamp(k[0] / 1000, UTC).replace(microsecond=0),
+                            "open": Decimal(str(k[1])),
+                            "high": Decimal(str(k[2])),
+                            "low": Decimal(str(k[3])),
+                            "close": Decimal(str(k[4])),
+                            "volume": Decimal(str(k[5])),
+                        }
+                        for k in raw
+                    ]
+                except (IndexError, ValueError, TypeError) as e:
+                    logger.warning("Binance klines parse failed for %s: %s", pair_symbol, e)
+    return _simulated_ohlc(pair_symbol, interval_minutes, limit)

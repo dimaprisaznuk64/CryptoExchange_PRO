@@ -8,7 +8,7 @@ from sqlalchemy import select
 from app.core.database import async_session
 from app.core.security import decode_token, is_token_blacklisted
 from app.models.user import User
-from app.services.market import _live_price
+from app.services.market import get_live_price_async
 from app.services.depth import order_book
 from app.services.notifications import list_notifications, unread_count
 
@@ -53,7 +53,7 @@ async def ws_prices(websocket: WebSocket):
         while True:
             now = datetime.now(UTC)
             for pair in subscribed:
-                price = _live_price(pair, now)
+                price = await get_live_price_async(pair)
                 await websocket.send_json(
                     {
                         "type": "price",
@@ -62,12 +62,12 @@ async def ws_prices(websocket: WebSocket):
                         "ts": now.isoformat(),
                     }
                 )
-            await asyncio.sleep(0.05)
+            await asyncio.sleep(1.0)
             tick += 1
-            # periodic order book snapshot every ~5 iterations
-            if tick % 5 == 0:
+            # order book snapshot every other tick (~2s) — plenty for a depth ladder
+            if tick % 2 == 0:
                 for pair in subscribed[:1]:
-                    book = order_book(pair)
+                    book = await order_book(pair)
                     await websocket.send_json({"type": "book", **book})
     except WebSocketDisconnect:
         logger.info("WS disconnected for %s", user.id)

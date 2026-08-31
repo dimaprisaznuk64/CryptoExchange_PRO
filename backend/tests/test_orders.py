@@ -361,9 +361,12 @@ async def test_stop_loss_sell_rests_then_triggers_via_monitor(client, db_session
     btc = await _balance(client, headers, "BTC")
     assert float(btc["frozen"]) == 0.04
 
+    async def _fake_live_price(symbol):
+        return Decimal("49000")
+
     monkeypatch.setattr(
-        "app.services.trading._live_price",
-        lambda symbol, ts: Decimal("49000"),
+        "app.services.trading.get_live_price_async",
+        _fake_live_price,
     )
     await trading_service.check_conditional_orders(db_session)
 
@@ -391,9 +394,12 @@ async def test_take_profit_buy_triggers_via_monitor(client, db_session, monkeypa
     usdt = await _balance(client, headers, "USDT")
     assert float(usdt["frozen"]) == 2000.0   # 0.04 * 50000
 
+    async def _fake_live_price(symbol):
+        return Decimal("49000")
+
     monkeypatch.setattr(
-        "app.services.trading._live_price",
-        lambda symbol, ts: Decimal("49000"),
+        "app.services.trading.get_live_price_async",
+        _fake_live_price,
     )
     await trading_service.check_conditional_orders(db_session)
 

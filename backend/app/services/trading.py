@@ -1,8 +1,8 @@
 import logging
-from datetime import datetime, UTC
+from datetime import datetime
 from decimal import Decimal
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,7 +15,7 @@ from app.models.trade import Trade
 from app.models.transaction import Transaction, TransactionType, TransactionStatus
 from app.services import wallet as wallet_service
 from app.services import notifications as notifications_service
-from app.services.market import _current_price, _live_price
+from app.services.market import get_live_price_async
 
 logger = logging.getLogger(__name__)
 
@@ -181,7 +181,7 @@ async def _sweep_open_orders(db: AsyncSession, user_id: str) -> list[Order]:
     filled: list[Order] = []
     for order in result.scalars().all():
         pair = order.pair
-        current = _current_price(pair.symbol)
+        current = await get_live_price_async(pair.symbol)
         crossed = (
             (order.side == OrderSide.buy and current <= _to_dec(order.price))
             or (order.side == OrderSide.sell and current >= _to_dec(order.price))
@@ -216,7 +216,6 @@ async def check_conditional_orders(
 
     Called after each user action and periodically by the background monitor.
     """
-    now = datetime.now(UTC)
     query = (
         select(Order)
         .options(
@@ -234,7 +233,7 @@ async def check_conditional_orders(
     filled: list[Order] = []
     for order in result.scalars().all():
         pair = order.pair
-        live = _live_price(pair.symbol, now)
+        live = await get_live_price_async(pair.symbol)
         if not _conditional_triggered(order, live):
             continue
         await _execute_limit_fill(db, order, pair)
@@ -305,7 +304,7 @@ async def _place_market(
     side: OrderSide,
     qty: float,
 ) -> Order:
-    price = _current_price(pair.symbol)
+    price = await get_live_price_async(pair.symbol)
     qty_dec = _to_dec(qty)
     notional = qty_dec * price
 

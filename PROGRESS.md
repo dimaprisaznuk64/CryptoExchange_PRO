@@ -5,10 +5,21 @@
 ## Останнє оновлення
 
 - Дата: 2026-08-31
-- Стан: **Демо-бонус $10,000 USDT при реєстрації — завершено.**
+- Стан: **Реальні ринкові дані Binance (з fallback на симуляцію) — завершено.**
 - Робоча папка: `C:\Users\DIMAS\Desktop\Programming\PythonPRO\CryptoExchange_PRO`
 
-### Що зроблено зараз (демо-баланс $10,000 USDT):
+### Що зроблено зараз (Binance market data з fallback):
+- Новий `app/services/binance_client.py`: тонкий async-клієнт до публічних REST Binance (price, 24hr, klines, depth) без API-ключа, таймаут 4с, мапа пар BTC/USDT, ETH/USDT (BTC/ETH-USD апроксимуються через USDT)
+- `app/services/market.py`: `get_live_price_async` — live-ціна з Binance (Redis-кеш) з fallback на детерміновану симуляцію; tickers/24h/OHLC тепер намагаються брати дані з Binance, інакше симуляція
+- `app/services/depth.py`: `order_book` — реальний стакан Binance з fallback на синтетичний
+- `app/services/trading.py`: маркет/ліміт/conditional-ордери використовують `get_live_price_async`
+- `app/services/portfolio.py`: оцінка портфоліо за live-ціною; history — фінальна точка з live-ціною (узгоджено з portfolio)
+- `app/routers/ws.py`: WS `/ws/prices` штовхає live-ціну через `get_live_price_async`
+- `tests/test_orders.py`: розширено (24 тести) — маркет/ліміт/conditional, фільтри, freeze/unfreeze
+- Тести: **102 passed** (incl. 24 orders, stable portfolio history)
+- Коміт: див. git log
+
+### Що зроблено раніше (демо-баланс $10,000 USDT):
 - `core/config.py`: + `DEMO_SIGNUP_BONUS_USDT` (default `10000.0`) та `DEMO_SIGNUP_BONUS_ASSET` (default `"USDT"`), конфігурується через env
 - `routers/auth.py`: при реєстрації після створення юзера нараховується демо-бонус через `services/wallet.credit()` (atomic, з ledger-записом, `TransactionType.deposit`, note "Demo signup bonus") + аудит `auth.demo_bonus`; помилка бонусу не блокує реєстрацію (try/except + logger)
 - Тести: `tests/test_auth.py` → новий `test_register_credits_demo_usdt_bonus` (реєстрація → `/wallets/balances` показує 10000.0 balance/available) → **102 passed** (було 101)
@@ -330,8 +341,9 @@
 
 ## Наступний крок
 
-- ✅ Демо-бонус $10,000 USDT при реєстрації (2026-08-31) → **102 passed**
-- ➡️ Далі з плану «оживлення»: Market Maker (Celery/скрипт, що генерує ордери в стакані та рухає ціну), щоб прибрати відчуття порожнечі
+- ✅ Демо-бонус $10,000 USDT при реєстрації → **102 passed**
+- ✅ Бекенд: реальні ринкові дані Binance (ціни/стакан/свічки) з fallback на симуляцію → **102 passed**
+- ➡️ Далі з плану «оживлення»: Market Maker (генерація ордерів у стакані та рух ціни), щоб прибрати відчуття порожнечі
 - ➡️ Далі з плану «стабільність»: Error Boundary на фронтенді (проти білої сторінки) та стабілізація WebSocket (wss:// + reconnect)
 - ➡️ Майбутнє (ideas): lightweight-charts (свічковий графік як на TradingView), 2FA, розширені типи ордерів
 

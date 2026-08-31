@@ -11,7 +11,7 @@ from app.models.asset import Asset
 from app.models.trading_pair import TradingPair
 from app.models.trade import Trade
 from app.models.transaction import Transaction
-from app.services.market import _current_price, _price_at
+from app.services.market import _price_at, get_live_price_async
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +99,7 @@ async def get_portfolio(db: AsyncSession, user_id: str) -> dict:
                 continue
             candidates.sort(key=lambda c: c[0])
             _, pair_symbol, quote = candidates[0]
-            usd_price = _current_price(pair_symbol)
+            usd_price = await get_live_price_async(pair_symbol)
             val = balance * usd_price
             avg_cost = await _avg_cost(db, user_id, asset.id)
             if avg_cost is not None:
@@ -261,7 +261,7 @@ async def get_portfolio_history(
     if end > now:
         end = now
 
-    def usd_value(bal: dict[str, Decimal], ts: datetime) -> float:
+    async def usd_value(bal: dict[str, Decimal], ts: datetime, use_live: bool = False) -> float:
         total = Decimal("0")
         for asset_id, v in bal.items():
             if v == 0:
@@ -274,7 +274,11 @@ async def get_portfolio_history(
                 if not candidates:
                     continue
                 candidates.sort(key=lambda c: c[0])
-                px = _price_at(candidates[0][1], ts)
+                pair_symbol = candidates[0][1]
+                if use_live:
+                    px = await get_live_price_async(pair_symbol)
+                else:
+                    px = _price_at(pair_symbol, ts)
             total += v * px
         return float(total)
 
@@ -289,9 +293,11 @@ async def get_portfolio_history(
         while idx < len(txs) and _utc(txs[idx].created_at) > ts:
             balance[txs[idx].asset_id] -= Decimal(str(txs[idx].delta))
             idx += 1
-        out.append({"time": ts, "value": usd_value(balance, ts)})
+        out.append({"time": ts, "value": await usd_value(balance, ts)})
 
-    # final point at current time uses untouched current balances
-    out.append({"time": now, "value": usd_value(current_balance, now)})
+    # final point at current time uses untouched current balances and the
+    # same live price as get_portfolio, so the current sample always matches
+    # the portfolio total.
+    out.append({"time": now, "value": await usd_value(current_balance, now, use_live=True)})
 
     return sorted(out, key=lambda p: p["time"])
