@@ -36,3 +36,5 @@ logs/
 # Zips / build
 *.zip
 build/
+
+.vercel

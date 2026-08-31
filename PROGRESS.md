@@ -5,19 +5,18 @@
 ## Останнє оновлення
 
 - Дата: 2026-08-31
-- Стан: **Реальні ринкові дані Binance (з fallback на симуляцію) — завершено.**
+- Стан: **Реальні ринкові дані Binance + стабільність /trade на проді — завершено.**
 - Робоча папка: `C:\Users\DIMAS\Desktop\Programming\PythonPRO\CryptoExchange_PRO`
+- Прод: backend → Render (`https://cryptoexchange-backend.onrender.com`), frontend → Vercel (`https://crypto-exchange-pro-two.vercel.app`)
 
-### Що зроблено зараз (Binance market data з fallback):
-- Новий `app/services/binance_client.py`: тонкий async-клієнт до публічних REST Binance (price, 24hr, klines, depth) без API-ключа, таймаут 4с, мапа пар BTC/USDT, ETH/USDT (BTC/ETH-USD апроксимуються через USDT)
-- `app/services/market.py`: `get_live_price_async` — live-ціна з Binance (Redis-кеш) з fallback на детерміновану симуляцію; tickers/24h/OHLC тепер намагаються брати дані з Binance, інакше симуляція
-- `app/services/depth.py`: `order_book` — реальний стакан Binance з fallback на синтетичний
-- `app/services/trading.py`: маркет/ліміт/conditional-ордери використовують `get_live_price_async`
-- `app/services/portfolio.py`: оцінка портфоліо за live-ціною; history — фінальна точка з live-ціною (узгоджено з portfolio)
-- `app/routers/ws.py`: WS `/ws/prices` штовхає live-ціну через `get_live_price_async`
-- `tests/test_orders.py`: розширено (24 тести) — маркет/ліміт/conditional, фільтри, freeze/unfreeze
-- Тести: **102 passed** (incl. 24 orders, stable portfolio history)
-- Коміт: див. git log
+### Що зроблено зараз (Binance live + WS/polling + фікс /trade):
+- Бекенд на проде (Render) віддає **реальні ціни Binance** (BTC ~$78k, ETH ~$2.4k): у `binance_client.py` тепер список хостів `api.binance.com` → `data-api.binance.vision` (офіційний market-data хост, доступніший з хмар), перед fallback на симуляцію. Справжні ціни з'явились після деплою на Render.
+- Frontend polling-fallback: коли Render free вбиває довгоживучі WS, `useRealtime` деградує на REST-polling (tickers + depth кожні 2с) після `MAX_RECONNECTS=3`; статус-бейдж «live» (WS) / «synced» (polling) на `/` та `/trade`.
+- `GET /api/v1/market/depth/{symbol}` — HTTP-ендпоінт стакану (для polling).
+- **Фікс WS-циклу**: `connectAttempts` перенесено у `useRef` (раніше лінчильник скидався при кожному ре-рендері effect через `setReconnect`, тож MAX_RECONNECTS ніколи не досягався і браузер нескінченно плодив WS-конекти на Render → кіл TTB через кілька секунд); `new WebSocket()` обгорнуто в try/catch.
+- **Фікс крашу /trade на десктопі** (корінь «This page couldn't load»): `CandleChart` робив `.toFixed()` прямо на полях свічки, які бекенд повертає як **рядки** (Binance klines). Hover на графіку (`onMouseEnter`) → `hovered.candle.open.toFixed(...)` → `TypeError` → краш. Тепер `useMemo` конвертує `open/high/low/close/volume` у числа. На телефоні hover немає (тач), тому падало лише на ноутбуці.
+- Тести: **104 passed** (12 market з новим depth-тестом); frontend lint чистий, `next build` зелений.
+- Деплой: backend → Render (Manual Deploy), frontend → Vercel (`vercel --prod`, Root Directory `frontend`, проєкт `crypto-exchange-pro`).
 
 ### Що зроблено раніше (демо-баланс $10,000 USDT):
 - `core/config.py`: + `DEMO_SIGNUP_BONUS_USDT` (default `10000.0`) та `DEMO_SIGNUP_BONUS_ASSET` (default `"USDT"`), конфігурується через env
