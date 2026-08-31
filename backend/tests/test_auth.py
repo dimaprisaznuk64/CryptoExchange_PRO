@@ -144,6 +144,27 @@ async def test_refresh_returns_new_access(client, db_session):
     resp = await client.post("/api/v1/auth/refresh", json={"refresh_token": refresh})
     assert resp.status_code == 200
     assert resp.json()["access_token"]
+    assert resp.json()["refresh_token"]
+
+
+@pytest.mark.asyncio
+async def test_refresh_rotation_revokes_old_refresh(client, db_session):
+    from app.core.security import create_refresh_token
+    await _create_user(db_session, "u-rot", "rot@test.com", "rotuser")
+    old_refresh = create_refresh_token("u-rot")
+
+    first = await client.post("/api/v1/auth/refresh", json={"refresh_token": old_refresh})
+    assert first.status_code == 200
+    new_refresh = first.json()["refresh_token"]
+    assert new_refresh != old_refresh
+
+    # The presented (old) refresh must now be revoked/blacklisted.
+    reuse = await client.post("/api/v1/auth/refresh", json={"refresh_token": old_refresh})
+    assert reuse.status_code == 401
+
+    # The rotated-in refresh keeps working.
+    second = await client.post("/api/v1/auth/refresh", json={"refresh_token": new_refresh})
+    assert second.status_code == 200
 
 
 @pytest.mark.asyncio

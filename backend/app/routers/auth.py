@@ -157,7 +157,7 @@ async def login(
     )
 
 
-@router.post("/refresh", response_model=AccessTokenResponse)
+@router.post("/refresh", response_model=TokenResponse)
 async def refresh(data: RefreshRequest, db: AsyncSession = Depends(get_db)):
     payload = decode_token(data.refresh_token, expected_type="refresh")
     if payload is None:
@@ -180,7 +180,14 @@ async def refresh(data: RefreshRequest, db: AsyncSession = Depends(get_db)):
             detail="User not found or blocked",
         )
 
-    return AccessTokenResponse(access_token=create_access_token(user.id))
+    # Refresh token rotation: revoke the presented refresh token and issue a
+    # new one, so an old (potentially leaked) refresh can't be reused.
+    await blacklist_token(payload.get("jti", ""))
+
+    return TokenResponse(
+        access_token=create_access_token(user.id),
+        refresh_token=create_refresh_token(user.id),
+    )
 
 
 @router.post("/logout", status_code=204)

@@ -1,5 +1,4 @@
 import type {
-  AccessTokenResponse,
   AdminOrderList,
   AdminStats,
   AdminTradeList,
@@ -123,8 +122,8 @@ async function refreshAccessToken(): Promise<string | null> {
       body: JSON.stringify({ refresh_token: refresh }),
     });
     if (!res.ok) return null;
-    const data = (await res.json()) as AccessTokenResponse;
-    tokenStore.setTokens(data.access_token, refresh);
+    const data = (await res.json()) as TokenResponse;
+    tokenStore.setTokens(data.access_token, data.refresh_token);
     return data.access_token;
   } catch {
     return null;
