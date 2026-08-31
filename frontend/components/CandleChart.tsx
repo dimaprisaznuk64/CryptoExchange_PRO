@@ -15,7 +15,17 @@ export const CandleChart = memo(function CandleChart({ candles, height = 320 }: 
   const { points, width, bodyW, step } = useMemo(() => {
     if (candles.length === 0) return { points: [], width: 0, bodyW: 0, step: 0 };
     const w = 720;
-    const viewCandles = candles.slice(-120);
+    // Binance klines deliver open/high/low/close/volume as strings; coerce them
+    // to numbers so every consumer (chart maths, .toFixed() in the hover tooltip)
+    // gets a real number instead of crashing on a string.
+    const viewCandles = candles.slice(-120).map((c) => ({
+      ...c,
+      open: Number(c.open),
+      high: Number(c.high),
+      low: Number(c.low),
+      close: Number(c.close),
+      volume: Number(c.volume),
+    }));
     const n = viewCandles.length;
     const bodyW = Math.max(2, Math.min(14, (w / n) * 0.6));
     const step = w / n;
