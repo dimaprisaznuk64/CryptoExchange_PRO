@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 import logging
+import secrets
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -205,6 +206,19 @@ async def logout(data: LogoutRequest):
                 access_payload.get("jti", ""),
                 ttl=remaining_ttl(access_payload),
             )
+
+
+@router.post("/ws-ticket", response_model=AccessTokenResponse)
+async def ws_ticket(current_user: User = Depends(get_current_user)):
+    """Issue a short-lived, single-use ticket to authenticate a WebSocket
+    connection, so the JWT is never placed in a WS URL query parameter."""
+    ticket = await cache.create_ws_ticket(current_user.id)
+    if not ticket:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Ticket service unavailable",
+        )
+    return {"access_token": ticket, "token_type": "bearer"}
 
 
 @router.get("/me", response_model=UserResponse)

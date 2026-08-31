@@ -1,6 +1,7 @@
 import json
 import logging
 from typing import Any, Optional
+from uuid import uuid4
 
 import redis.asyncio as aioredis
 
@@ -72,3 +73,38 @@ async def cache_delete(key: str) -> None:
         await redis_client.delete(key)
     except Exception as e:
         logger.warning("Cache delete error: %s", e)
+
+
+# --- WebSocket one-time tickets ------------------------------------------
+# Short-lived (default 60s), single-use credential used to authenticate a
+# WebSocket connection instead of putting the JWT in a query parameter
+# (which can leak into proxy/access logs and browser history).
+
+WS_TICKET_TTL = 60
+
+
+async def create_ws_ticket(user_id: str, ttl: int = WS_TICKET_TTL) -> str:
+    if not redis_client:
+        return ""
+    ticket = str(uuid4())
+    try:
+        await redis_client.set(f"crypto:ws-ticket:{ticket}", user_id, ex=ttl)
+    except Exception as e:
+        logger.warning("Create ws ticket error: %s", e)
+        return ""
+    return ticket
+
+
+async def consume_ws_ticket(ticket: str) -> Optional[str]:
+    if not redis_client:
+        return None
+    key = f"crypto:ws-ticket:{ticket}"
+    try:
+        user_id = await redis_client.get(key)
+        if user_id is None:
+            return None
+        await redis_client.delete(key)  # single-use
+        return user_id
+    except Exception as e:
+        logger.warning("Consume ws ticket error: %s", e)
+        return None

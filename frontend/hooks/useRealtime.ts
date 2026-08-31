@@ -64,7 +64,6 @@ export function useRealtimePrices(pairs: string[]) {
     if (pairs.length === 0) return;
     if (!tokenStore.getAccess()) return;
 
-    const url = getWsUrl(pairs);
     let ws: WebSocket | null = null;
     let closed = false;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -130,12 +129,24 @@ export function useRealtimePrices(pairs: string[]) {
       pendingRef.current = { dirty: false };
     }, FLUSH_INTERVAL_MS);
 
-    const connect = () => {
+    const connect = async () => {
       if (closed) return;
       connectAttemptsRef.current += 1;
       if (connectAttemptsRef.current > MAX_RECONNECTS) {
         // Give up on WS for good and fall back to REST polling.
         setState((s) => ({ ...s, connected: false }));
+        startPolling();
+        return;
+      }
+      // Fetch a short-lived, single-use ticket instead of putting the JWT
+      // in the WebSocket URL (which would leak into logs/history).
+      let url: string | null;
+      try {
+        url = await getWsUrl(pairs);
+      } catch {
+        url = null;
+      }
+      if (!url) {
         startPolling();
         return;
       }
@@ -210,7 +221,7 @@ export function useRealtimePrices(pairs: string[]) {
       };
     };
 
-    connect();
+    void connect();
 
     return () => {
       closed = true;

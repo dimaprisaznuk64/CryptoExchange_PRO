@@ -5,6 +5,7 @@ from datetime import datetime, UTC
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
 from sqlalchemy import select
 
+from app.core import cache
 from app.core.database import async_session
 from app.core.security import decode_token, is_token_blacklisted
 from app.models.user import User
@@ -18,6 +19,18 @@ router = APIRouter(tags=["ws"])
 
 
 async def authenticate_ws(websocket: WebSocket) -> User | None:
+    ticket = websocket.query_params.get("ticket")
+    if ticket:
+        # One-time WS ticket issued by POST /auth/ws-ticket (no JWT in the URL).
+        user_id = await cache.consume_ws_ticket(ticket)
+        if user_id is None:
+            return None
+        async with async_session() as db:
+            result = await db.execute(select(User).where(User.id == user_id))
+            user = result.scalar_one_or_none()
+        return user if user is not None and user.is_active else None
+
+    # Legacy fallback: JWT passed via ?token (kept for backward compat).
     token = websocket.query_params.get("token")
     if not token:
         return None

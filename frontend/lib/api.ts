@@ -1,4 +1,5 @@
 import type {
+  AccessTokenResponse,
   AdminOrderList,
   AdminStats,
   AdminTradeList,
@@ -204,6 +205,11 @@ export const api = {
       body: { refresh_token: refreshToken, access_token: accessToken ?? undefined },
     }),
   me: () => apiFetch<User>("/api/v1/auth/me", { auth: true }),
+  getWsTicket: () =>
+    apiFetch<AccessTokenResponse>("/api/v1/auth/ws-ticket", {
+      method: "POST",
+      auth: true,
+    }),
 
   // market
   getPairs: () => apiFetch<TradingPair[]>("/api/v1/market/pairs"),
@@ -356,8 +362,9 @@ export const api = {
     ),
 };
 
-export const getWsUrl = (pairs: string[]): string => {
-  const token = tokenStore.getAccess() ?? "";
-  const params = new URLSearchParams({ token, pairs: pairs.join(",") });
+export const getWsUrl = async (pairs: string[]): Promise<string | null> => {
+  const { access_token: ticket } = await api.getWsTicket();
+  if (!ticket) return null;
+  const params = new URLSearchParams({ ticket, pairs: pairs.join(",") });
   return `${WS_URL}/ws/prices?${params.toString()}`;
 };

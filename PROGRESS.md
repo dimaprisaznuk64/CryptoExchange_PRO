@@ -5,7 +5,11 @@
 ## Останнє оновлення
 
 - Дата: 2026-08-31
-- Стан: **Реальні ринкові дані Binance + стабільність /trade на проді + Phase 27 (security/financial integrity, частина 1 і 2) — в роботі.**
+- Стан: **Реальні ринкові дані Binance + стабільність /trade на проді + Phase 27 (security/financial integrity, частина 3: WS ticket) — в роботі.**
+
+### Що зроблено зараз (Phase 27 — Server Security & Financial Integrity, частина 3: WS ticket + тести):
+- **JWT більше не потрапляє в WS URL.** `POST /api/v1/auth/ws-ticket` (`auth.py`) видає короткоживучий одноразовий ticket (`core/cache.py:` `create_ws_ticket`/`consume_ws_ticket`, Redis key `crypto:ws-ticket:<ticket>`, TTL 60s, single-use delete). `authenticate_ws` (`ws.py`) приймає `?ticket=` через `consume_ws_ticket` з fallback на старий `?token=`. Frontend: `api.getWsTicket()` + async `getWsUrl(pairs)` → `?ticket=`, `useRealtime.ts` `connect()` async + `void connect()`. Це усуває витік JWT у query-параметрі WS (можливий перехоплення в логах проксі/WS gateway).
+- Додано тести: `test_ws_ticket_single_use` (перший consume → user_id, повторний → None) і `test_ws_ticket_unknown_rejected` (фейковий ticket не резолвиться) у `test_auth.py` → **109 passed**; frontend build зелений.
 
 ### Що зроблено зараз (Phase 27 — Server Security & Financial Integrity, частина 2: logout revoke access):
 - **Logout тепер відкликає і access token** (`auth.py`, `security.py`, `schemas/auth.py`, frontend): раніше `/logout` blacklists лише refresh, тож access токен залишався валідним до кінця свого ~30-хв TTL після виходу. Тепер клієнт передає і access token; `LogoutRequest` приймає `access_token`, а `blacklist_token(jti, ttl)` + новий helper `remaining_ttl()` blacklists jti access-токена на його залишковий TTL. `get_current_user` уже перевіряє blacklist, тож зразу після logout `/me` та всі захищені ендпоінти повертають 401.

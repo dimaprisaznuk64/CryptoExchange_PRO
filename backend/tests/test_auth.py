@@ -211,3 +211,44 @@ async def test_logout_also_revokes_access_token(client, db_session):
         "/api/v1/auth/me", headers={"Authorization": f"Bearer {access}"}
     )
     assert me.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_ws_ticket_single_use(client, db_session):
+    from app.core.security import create_access_token
+    from app.core import cache
+    await _create_user(db_session, "u-wt", "wt@test.com", "wtuser")
+    access = create_access_token("u-wt")
+
+    resp = await client.post(
+        "/api/v1/auth/ws-ticket",
+        headers={"Authorization": f"Bearer {access}"},
+    )
+    assert resp.status_code == 200
+    ticket = resp.json()["access_token"]
+    assert ticket
+
+    # First consume returns the user_id.
+    user_id = await cache.consume_ws_ticket(ticket)
+    assert user_id == "u-wt"
+
+    # The ticket is single-use: second consume must be None.
+    reused = await cache.consume_ws_ticket(ticket)
+    assert reused is None
+
+
+@pytest.mark.asyncio
+async def test_ws_ticket_unknown_rejected(client, db_session):
+    from app.core.security import create_access_token
+    from app.core import cache
+    await _create_user(db_session, "u-wt2", "wt2@test.com", "wt2user")
+    access = create_access_token("u-wt2")
+
+    # An unknown/fake ticket must not resolve to a user.
+    assert await cache.consume_ws_ticket("not-a-real-ticket") is None
+
+    resp = await client.post(
+        "/api/v1/auth/ws-ticket",
+        headers={"Authorization": f"Bearer {access}"},
+    )
+    assert resp.status_code == 200
