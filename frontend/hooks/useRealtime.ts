@@ -41,6 +41,11 @@ export function useRealtimePrices(pairs: string[]) {
   const [reconnect, setReconnect] = useState(0);
   const hasToken = typeof window !== "undefined" && Boolean(tokenStore.getAccess());
 
+  // Survives effect restarts (setReconnect re-runs the effect), so MAX_RECONNECTS
+  // is actually honoured instead of resetting to 0 on every reconnect and
+  // spinning up an endless WebSocket loop that crashes the tab.
+  const connectAttemptsRef = useRef(0);
+
   // Polling is driven from inside the effect via an interval; we keep a ref so
   // the cleanup can always tear it down regardless of which mode is active.
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -62,7 +67,6 @@ export function useRealtimePrices(pairs: string[]) {
     const url = getWsUrl(pairs);
     let ws: WebSocket | null = null;
     let closed = false;
-    let connectAttempts = 0;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
     const stopPolling = () => {
@@ -128,16 +132,26 @@ export function useRealtimePrices(pairs: string[]) {
 
     const connect = () => {
       if (closed) return;
-      connectAttempts += 1;
-      if (connectAttempts > MAX_RECONNECTS) {
+      connectAttemptsRef.current += 1;
+      if (connectAttemptsRef.current > MAX_RECONNECTS) {
         // Give up on WS for good and fall back to REST polling.
         setState((s) => ({ ...s, connected: false }));
         startPolling();
         return;
       }
-      ws = new WebSocket(url);
+      let socket: WebSocket;
+      try {
+        socket = new WebSocket(url);
+      } catch {
+        // Invalid/blocked WebSocket URL — never reachable, so stop retrying
+        // and fall back to REST polling immediately.
+        startPolling();
+        return;
+      }
+      ws = socket;
 
       ws.onopen = () => {
+        connectAttemptsRef.current = 0;
         stopPolling();
         pendingRef.current.connected = true;
         pendingRef.current.mode = "ws";
@@ -171,8 +185,12 @@ export function useRealtimePrices(pairs: string[]) {
 
       ws.onclose = () => {
         setState((s) => ({ ...s, connected: false }));
-        if (!closed && !reconnectTimer && connectAttempts < MAX_RECONNECTS) {
-          const delay = Math.min(1000 * 2 ** (connectAttempts - 1), 15000);
+        if (
+          !closed &&
+          !reconnectTimer &&
+          connectAttemptsRef.current < MAX_RECONNECTS
+        ) {
+          const delay = Math.min(1000 * 2 ** (connectAttemptsRef.current - 1), 15000);
           reconnectTimer = setTimeout(() => {
             reconnectTimer = null;
             setReconnect((r) => r + 1);
