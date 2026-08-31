@@ -5,12 +5,18 @@
 ## Останнє оновлення
 
 - Дата: 2026-08-31
-- Стан: **Реальні ринкові дані Binance + стабільність /trade на проді + Phase 27 (security/financial integrity, частина 1) — в роботі.**
+- Стан: **Реальні ринкові дані Binance + стабільність /trade на проді + Phase 27 (security/financial integrity, частина 1 і 2) — в роботі.**
+
+### Що зроблено зараз (Phase 27 — Server Security & Financial Integrity, частина 2: logout revoke access):
+- **Logout тепер відкликає і access token** (`auth.py`, `security.py`, `schemas/auth.py`, frontend): раніше `/logout` blacklists лише refresh, тож access токен залишався валідним до кінця свого ~30-хв TTL після виходу. Тепер клієнт передає і access token; `LogoutRequest` приймає `access_token`, а `blacklist_token(jti, ttl)` + новий helper `remaining_ttl()` blacklists jti access-токена на його залишковий TTL. `get_current_user` уже перевіряє blacklist, тож зразу після logout `/me` та всі захищені ендпоінти повертають 401.
+- Frontend: `lib/api.ts` — `logout(refresh, access)`; `contexts/AuthContext.tsx` — зберігає access перед `tokenStore.clear()` і передає його.
+- Тест: `test_logout_also_revokes_access_token` (після logout `/me` → 401) → **106 passed**.
+- Коміт `f0a25d3`. Backend 106 passed; frontend `next build` зелений.
 
 ### Що зроблено зараз (Phase 27 — Security & Financial Integrity, частина 1: concurrency):
 - **Order `SELECT ... FOR UPDATE`** (`trading.py`): перед виконанням лімітних і TP/SL ордерів у `_sweep_open_orders` та `check_conditional_orders` рядок Order тепер лочиться `.with_for_update()`, і перед самим fill повторно перевіряється `order.status == open` (if не open → skip). Це усуває race між кількома worker'ами/процесами: раніше два worker'и могли одночасно побачити `order.status = open` і обидва заповнити один ордер → подвійне виконання. (Wallet-лоч `_lock_wallet` уже був; тепер і сам ордер лочиться.)
 - **`get_or_create_wallet` race fix** (`wallet.py`): SELECT тепер іде з `.with_for_update()`; якщо рядок не знайдено але паралельний запит уже вставив дублікат — `IntegrityError` ловиться, робиться `rollback` і повторний SELECT повертає існуючий wallet (граційний дедуп завдяки `UniqueConstraint(user_id, asset_id, type)`).
-- Тести: додано `test_get_or_create_wallet_dedup` → **105 passed**.
+- Тести: додано `test_get_or_create_wallet_dedup` → **105 passed** (далі 106 з logout-тестом).
 - _Note: SQLite (тестів) ігнорує `FOR UPDATE`, тож ці фікси реально активні на PostgreSQL у проді; тести підтверджують відсутність регресій і дедуп-безпеку._
 - Коміт: див. git log.
 - Робоча папка: `C:\Users\DIMAS\Desktop\Programming\PythonPRO\CryptoExchange_PRO`
