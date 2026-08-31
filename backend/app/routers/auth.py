@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+import logging
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,6 +13,7 @@ from app.core.ratelimit import (
     reset_failed_logins,
     AccountLocked,
 )
+from app.core.config import get_settings
 from app.core.security import (
     hash_password,
     verify_password,
@@ -22,11 +24,15 @@ from app.core.security import (
     is_token_blacklisted,
 )
 from app.dependencies.auth import get_current_user
+from app.models.transaction import TransactionType
 from app.models.user import User, UserRole
 from app.schemas.auth import RegisterRequest, LoginRequest, RefreshRequest, TokenResponse, AccessTokenResponse
 from app.schemas.user import UserResponse
+from app.services.wallet import credit
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+logger = logging.getLogger(__name__)
 
 AUTH_RATE_LIMIT = 20
 AUTH_RATE_WINDOW = 60
@@ -63,6 +69,30 @@ async def register(data: RegisterRequest, request: Request, db: AsyncSession = D
     await db.refresh(user)
 
     audit_log("auth.register", user_id=user.id, email=user.email, ip=_ip_of(request))
+
+    settings = get_settings()
+    bonus = settings.DEMO_SIGNUP_BONUS_USDT
+    if bonus > 0:
+        try:
+            bonus_wallet = await credit(
+                db,
+                user_id=user.id,
+                symbol=settings.DEMO_SIGNUP_BONUS_ASSET,
+                amount=float(bonus),
+                tx_type=TransactionType.deposit,
+                note="Demo signup bonus",
+            )
+            audit_log(
+                "auth.demo_bonus",
+                user_id=user.id,
+                email=user.email,
+                symbol=settings.DEMO_SIGNUP_BONUS_ASSET,
+                amount=str(bonus),
+                wallet_id=bonus_wallet.id,
+            )
+        except Exception:
+            logger.exception("Failed to credit demo signup bonus")
+        await db.commit()
 
     return TokenResponse(
         access_token=create_access_token(user.id),

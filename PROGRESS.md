@@ -4,9 +4,16 @@
 
 ## Останнє оновлення
 
-- Дата: 2026-08-29
-- Стан: **Phase 26 (Адмін part 2: перегляд ордерів/трейдів всіх користувачів) — завершено.**
+- Дата: 2026-08-31
+- Стан: **Демо-бонус $10,000 USDT при реєстрації — завершено.**
 - Робоча папка: `C:\Users\DIMAS\Desktop\Programming\PythonPRO\CryptoExchange_PRO`
+
+### Що зроблено зараз (демо-баланс $10,000 USDT):
+- `core/config.py`: + `DEMO_SIGNUP_BONUS_USDT` (default `10000.0`) та `DEMO_SIGNUP_BONUS_ASSET` (default `"USDT"`), конфігурується через env
+- `routers/auth.py`: при реєстрації після створення юзера нараховується демо-бонус через `services/wallet.credit()` (atomic, з ledger-записом, `TransactionType.deposit`, note "Demo signup bonus") + аудит `auth.demo_bonus`; помилка бонусу не блокує реєстрацію (try/except + logger)
+- Тести: `tests/test_auth.py` → новий `test_register_credits_demo_usdt_bonus` (реєстрація → `/wallets/balances` показує 10000.0 balance/available) → **102 passed** (було 101)
+- Залежить від наявності активу `USDT` у каталозі (сіється в `main.py` lifespan через `seed_catalog`)
+- Коміт: див. git log
 
 ### Що зроблено в Phase 0:
 - Створено структуру проєкту: `backend/`, `frontend/`, `docs/`, `docker/`, `scripts/`, `tests/`
@@ -323,8 +330,10 @@
 
 ## Наступний крок
 
-- ➡️ Кандидати на Phase 27+: адмін part 3 (дашборд/статистика), фактичний запуск деплою
-- ➡️ Майбутнє (ideas): сповіщення, деплой (Vercel + Docker)
+- ✅ Демо-бонус $10,000 USDT при реєстрації (2026-08-31) → **102 passed**
+- ➡️ Далі з плану «оживлення»: Market Maker (Celery/скрипт, що генерує ордери в стакані та рухає ціну), щоб прибрати відчуття порожнечі
+- ➡️ Далі з плану «стабільність»: Error Boundary на фронтенді (проти білої сторінки) та стабілізація WebSocket (wss:// + reconnect)
+- ➡️ Майбутнє (ideas): lightweight-charts (свічковий графік як на TradingView), 2FA, розширені типи ордерів
 
 ## Roadmap (фази)
 

@@ -1,6 +1,7 @@
 import pytest
 from sqlalchemy import insert
 
+from app.models.asset import Asset
 from app.models.user import User
 
 
@@ -39,6 +40,28 @@ async def test_register_duplicate_409(client):
         "email": "dup@test.com", "username": "other", "password": "strongpass123",
     })
     assert resp.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_register_credits_demo_usdt_bonus(client, db_session):
+    await db_session.execute(insert(Asset).values(
+        id="a-usdt", symbol="USDT", name="Tether", decimals=6, is_fiat=False,
+    ))
+    await db_session.commit()
+
+    resp = await client.post("/api/v1/auth/register", json={
+        "email": "bonus@test.com", "username": "bonususer", "password": "strongpass123",
+    })
+    assert resp.status_code == 201
+    token = resp.json()["access_token"]
+
+    balances = await client.get(
+        "/api/v1/wallets/balances", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert balances.status_code == 200
+    usdt = next(i for i in balances.json()["items"] if i["asset_symbol"] == "USDT")
+    assert float(usdt["balance"]) == 10000.0
+    assert float(usdt["available"]) == 10000.0
 
 
 @pytest.mark.asyncio

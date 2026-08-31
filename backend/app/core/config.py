@@ -47,6 +47,10 @@ class Settings(BaseSettings):
     # Conditional orders (TP/SL) background monitor
     CONDITIONAL_CHECK_INTERVAL_SECONDS: int = 5
 
+    # Demo signup bonus (USDT credited to a brand-new account)
+    DEMO_SIGNUP_BONUS_USDT: float = 10000.0
+    DEMO_SIGNUP_BONUS_ASSET: str = "USDT"
+
     # CORS
     CORS_ORIGINS: str = "http://localhost:3000"
     ALLOWED_HOSTS: str = "*"
