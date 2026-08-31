@@ -5,6 +5,7 @@ from typing import Optional
 
 from fastapi import HTTPException, status
 from sqlalchemy import delete, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.asset import Asset
@@ -33,18 +34,34 @@ async def get_or_create_wallet(
     db: AsyncSession, user_id: str, asset_id: str, wallet_type: WalletType = WalletType.spot
 ) -> Wallet:
     result = await db.execute(
-        select(Wallet).where(
+        select(Wallet)
+        .where(
             Wallet.user_id == user_id,
             Wallet.asset_id == asset_id,
             Wallet.type == wallet_type,
         )
+        .with_for_update()
     )
     wallet = result.scalar_one_or_none()
-    if wallet is None:
-        wallet = Wallet(user_id=user_id, asset_id=asset_id, type=wallet_type)
-        db.add(wallet)
+    if wallet is not None:
+        return wallet
+    # Not found: another concurrent request may be inserting right now. Try to
+    # create; if the FK/unique constraint trips (race), fetch the winner's row.
+    wallet = Wallet(user_id=user_id, asset_id=asset_id, type=wallet_type)
+    db.add(wallet)
+    try:
         await db.flush()
-        await db.refresh(wallet)
+    except IntegrityError:
+        await db.rollback()
+        result = await db.execute(
+            select(Wallet).where(
+                Wallet.user_id == user_id,
+                Wallet.asset_id == asset_id,
+                Wallet.type == wallet_type,
+            )
+        )
+        wallet = result.scalar_one()
+    await db.refresh(wallet)
     return wallet
 
 

@@ -177,9 +177,14 @@ async def _sweep_open_orders(db: AsyncSession, user_id: str) -> list[Order]:
             Order.status == OrderStatus.open,
             Order.type == OrderType.limit,
         )
+        .with_for_update()
     )
     filled: list[Order] = []
     for order in result.scalars().all():
+        # Row is FOR UPDATE-locked; re-check status (a concurrent worker may
+        # have already filled it) before executing, to prevent double fill.
+        if order.status != OrderStatus.open:
+            continue
         pair = order.pair
         current = await get_live_price_async(pair.symbol)
         crossed = (
@@ -226,12 +231,15 @@ async def check_conditional_orders(
             Order.status == OrderStatus.open,
             Order.type.in_([OrderType.take_profit, OrderType.stop_loss]),
         )
+        .with_for_update()
     )
     if user_id is not None:
         query = query.where(Order.user_id == user_id)
     result = await db.execute(query)
     filled: list[Order] = []
     for order in result.scalars().all():
+        if order.status != OrderStatus.open:
+            continue
         pair = order.pair
         live = await get_live_price_async(pair.symbol)
         if not _conditional_triggered(order, live):

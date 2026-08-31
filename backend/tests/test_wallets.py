@@ -1,9 +1,10 @@
 import pytest
-from sqlalchemy import insert
+from sqlalchemy import insert, select
 
 from app.models.user import User
 from app.models.asset import Asset
 from app.core.security import create_access_token, hash_password
+from app.services.wallet import get_or_create_wallet
 
 
 async def _seed_assets(db_session):
@@ -245,3 +246,29 @@ async def test_transfer_bad_wallet_type_422(client, db_session):
         "from_type": "badtype", "to_type": "funding",
     }, headers=headers)
     assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_get_or_create_wallet_dedup(db_session):
+    """Repeated get_or_create for the same key must return one wallet, not
+    crash on the unique constraint (race/duplicate safe)."""
+    await _seed_assets(db_session)
+    await db_session.execute(insert(User).values(
+        id="w-dedup", email="w-dedup@test.com", username="w-dedupname",
+        hashed_password=hash_password("secret123"), role="user", is_active=True,
+    ))
+    await db_session.commit()
+
+    a = await get_or_create_wallet(db_session, "w-dedup", "a-usd")
+    b = await get_or_create_wallet(db_session, "w-dedup", "a-usd")
+    assert a.id == b.id
+
+    from app.models.wallet import Wallet
+    result = await db_session.execute(
+        select(Wallet).where(
+            Wallet.user_id == "w-dedup",
+            Wallet.asset_id == "a-usd",
+        )
+    )
+    wallets = result.scalars().all()
+    assert len(wallets) == 1

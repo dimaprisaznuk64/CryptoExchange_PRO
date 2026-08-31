@@ -5,7 +5,14 @@
 ## Останнє оновлення
 
 - Дата: 2026-08-31
-- Стан: **Реальні ринкові дані Binance + стабільність /trade на проді — завершено.**
+- Стан: **Реальні ринкові дані Binance + стабільність /trade на проді + Phase 27 (security/financial integrity, частина 1) — в роботі.**
+
+### Що зроблено зараз (Phase 27 — Security & Financial Integrity, частина 1: concurrency):
+- **Order `SELECT ... FOR UPDATE`** (`trading.py`): перед виконанням лімітних і TP/SL ордерів у `_sweep_open_orders` та `check_conditional_orders` рядок Order тепер лочиться `.with_for_update()`, і перед самим fill повторно перевіряється `order.status == open` (if не open → skip). Це усуває race між кількома worker'ами/процесами: раніше два worker'и могли одночасно побачити `order.status = open` і обидва заповнити один ордер → подвійне виконання. (Wallet-лоч `_lock_wallet` уже був; тепер і сам ордер лочиться.)
+- **`get_or_create_wallet` race fix** (`wallet.py`): SELECT тепер іде з `.with_for_update()`; якщо рядок не знайдено але паралельний запит уже вставив дублікат — `IntegrityError` ловиться, робиться `rollback` і повторний SELECT повертає існуючий wallet (граційний дедуп завдяки `UniqueConstraint(user_id, asset_id, type)`).
+- Тести: додано `test_get_or_create_wallet_dedup` → **105 passed**.
+- _Note: SQLite (тестів) ігнорує `FOR UPDATE`, тож ці фікси реально активні на PostgreSQL у проді; тести підтверджують відсутність регресій і дедуп-безпеку._
+- Коміт: див. git log.
 - Робоча папка: `C:\Users\DIMAS\Desktop\Programming\PythonPRO\CryptoExchange_PRO`
 - Прод: backend → Render (`https://cryptoexchange-backend.onrender.com`), frontend → Vercel (`https://crypto-exchange-pro-two.vercel.app`)
 
