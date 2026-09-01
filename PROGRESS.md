@@ -5,7 +5,14 @@
 ## Останнє оновлення
 
 - Дата: 2026-09-01
-- Стан: **Phase 28 (Market Maker — живий стакан + рух ціни + trade tape) завершено. Backend 117 passed, frontend lint+build green.**
+- Стан: **Phase 29 (Error Boundary — захист від «білої сторінки») завершено. Backend 117 passed, frontend lint+build green.**
+
+### Що зроблено зараз (Phase 29 — Error Boundary, «стабільність»):
+- **`app/error.tsx`** (root boundary) — будь-який краш роуту/сторінки рендериться як дружній картковий екран замість «білої сторінки»: бейдж ERROR, пояснення, копка **Try again** (`retry()`, стаб. проп у Next 16.3), посилання Back to home, `digest` для зіставлення з серверними логами. Живе всередині root layout, тож Navbar і сесія лишаються.
+- **`app/trade/error.tsx`** (segment boundary) — для найтежчої сторінки `/trade` (графік/стакан/форми): якщо впаде одне віджета, замінюється лише термінал, решта застосунку жива.
+- **`app/global-error.tsx`** (root layout / last-resort) — коли падає сам layout: самодостатній `<html>/<body>` з inline-палітрою (бо глобальні стилі в global-error не підключаються), кнопка Try again.
+- Дотримано дока Next.js 16.3 (error.md у `node_modules/next/dist/docs`): все Client Components, `retry` замість `reset`, global-error з власними html/body.
+- QA: frontend lint ✓ (єдине warning pre-existing у `register/page.tsx`), `next build` ✓ (13 статичних сторінок). Тести backend не змінювались — 117 passed.
 
 ### Що зроблено зараз (Phase 28 — Market Maker, «оживлення» ринку):
 - **`services/market_maker.py`** — in-process `MarketMakerEngine`: на кожен тік (~0.5s, `MARKET_MAKER_TICK_SECONDS`) для кожної пари дрейфує mid-ціну (bounded random walk + ре-анчор до детермінованої ціни кожні 60с, щоб ціна лишалась згорткована зі свічками/24h stats), друкує угоди в барвисту «ленту» (taker б'є best level), споживає рівні стакана і відновлює повний ладдер навколо нової ціни; `tape` (rolling deque, maxlen 60) віддає останні угоди newest-first.
@@ -369,7 +376,8 @@
 - ✅ Демо-бонус $10,000 USDT при реєстрації → **102 passed**
 - ✅ Бекенд: реальні ринкові дані Binance (ціни/стакан/свічки) з fallback на симуляцію → **102 passed**
 - ✅ Market Maker: живий стакан, рух ціни, trade tape (симуляція → fallback; Binance → реальні принти) → **117 passed**
-- ➡️ Далі з плану «стабільність»: Error Boundary на фронтенді (проти білої сторінки) та стабілізація WebSocket (wss:// + reconnect)
+- ✅ Error Boundary: root + `/trade` segment + global-error → жодних «білих сторінок»
+- ➡️ Далі з плану «стабільність»: стабілізація WebSocket (wss:// + reconnect hardening)
 - ➡️ Майбутнє (ideas): lightweight-charts (свічковий графік як на TradingView), 2FA, розширені типи ордерів
 
 ## Roadmap (фази)
@@ -405,6 +413,7 @@
 | 26 | Адмін part 2: перегляд ордерів/трейдів всіх користувачів | ✅ (додано) |
 | 27 | Server Security & Financial Integrity (concurrency, logout revoke, WS ticket) | ✅ (додано) |
 | 28 | Market Maker (живий стакан + рух ціни + trade tape) | ✅ (додано) |
+| 29 | Error Boundary (root + /trade + global) проти білої сторінки | ✅ (додано) |
 
 ## Як запустити frontend
 
