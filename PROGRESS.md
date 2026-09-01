@@ -5,7 +5,15 @@
 ## Останнє оновлення
 
 - Дата: 2026-09-01
-- Стан: **Phase 30 (WS hardening: heartbeat + resume + subscribe) завершено. Backend 119 passed, frontend lint+build green.**
+- Стан: **v1.0 — всі 31 фази завершені. Backend 119 passed, frontend lint+build green, README/docs та deploy-конфіги фіналізовані.**
+
+### Що зроблено зараз (Phase 31 — фінальний README + deploy prep, v1.0):
+- **README.md переписано**: live-посилання (frontend Vercel, backend Render), повний функціонал (користувач/адмін/під капотом після 30 фаз), стек, quickstart, тести (119), таблиця деплою, структура репо, посилання на доки.
+- **docs/WS.md (новий)**: повний WebSocket-протокол — endpoints, авторизація через WS-ticket, вхідні (`pong`, `subscribe`, `unsubscribe`) і вихідні (`hello`, `price`, `book`, `trades`, `ping`, `subscribed`) повідомлення, джерела даних (Binance → Market Maker), `/ws/notifications`, поведінка клієнта (pong, polling-degradation, staleness).
+- **render.yaml**: прибрано заглушку — `CORS_ORIGINS` тепер `https://crypto-exchange-pro-two.vercel.app`.
+- **docs/DEPLOYMENT.md**: додано блок «Поточні live-деплої» та пояснення WebSocket-heartbeat для free-хостингів.
+- QA: backend 119 passed (не змінювався), frontend lint+build green (не змінювався).
+- **= v1.0 досягнуто.** Далі за треком: WebSocket Chat PRO (автономний проєкт).
 
 ### Що зроблено зараз (Phase 30 — WS hardening: heartbeat, resume, subscribe, wss://):
 - **Heartbeat ping/pong** у `/ws/prices`: сервер що ~15 тіків шле `{"type":"ping","ts":...}`, клієнт відповідає `{"type":"pong"}`. Якщо за **45с** не було жодної відповіді — сервер сам закриває сокет (Render free / проксі тихо вбивають idle-з'єднання, і лише клієнтський pong доводить, що канал живий). Клієнтський `onmessage` у `useRealtime.ts` відповідає на ping; додано **staleness-watcher**: якщо відкритий сокет нічого не шле 20с — клієнт сам закриває його, і спрацьовує reconnect/backoff замість «застиглого» UI на half-open з'єднанні.
@@ -422,6 +430,7 @@
 | 28 | Market Maker (живий стакан + рух ціни + trade tape) | ✅ (додано) |
 | 29 | Error Boundary (root + /trade + global) проти білої сторінки | ✅ (додано) |
 | 30 | WS hardening (heartbeat ping/pong, resume-снапшот, subscribe/unsubscribe, wss://) | ✅ (додано) |
+| 31 | README + docs (WS.md, DEPLOYMENT) + deploy-конфіги → **v1.0** | ✅ (додано) |
 
 ## Як запустити frontend
 

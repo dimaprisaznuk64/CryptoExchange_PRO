@@ -35,6 +35,6 @@ services:
       - key: API_V1_PREFIX
         value: "/api/v1"
       - key: CORS_ORIGINS
-        value: "https://<FRONTEND_URL_HERE>"
+        value: "https://crypto-exchange-pro-two.vercel.app"
       - key: ALLOWED_HOSTS
         value: "*"

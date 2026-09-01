@@ -11,6 +11,16 @@
 > постійний in-process фоновий монітор (TP/SL) і Celery worker/beat.
 > Тому backend запускаємо в контейнері Docker, а фронтенд — на Vercel.
 
+**Поточні live-деплої**
+- Backend (Render free): https://cryptoexchange-backend.onrender.com
+- Frontend (Vercel): https://crypto-exchange-pro-two.vercel.app
+
+> **WebSocket heartbeat.** У `app/routers/ws.py` задіяний heartbeat: сервер
+> шле `{"type":"ping"}` що ~15с і закриває з'єднання (1001), якщо клієнт не
+> відповів `pong` 45с. Frontend (Hook `useRealtime`) відповідає на ping і сам
+> закриває «застійний» сокет. Це потрібно саме на free-хостингах, де idle
+> WebSocket тихо вбивається.
+
 ---
 
 ## 1. Backend через Docker
@@ -66,11 +76,7 @@ docker compose up -d --build
 docker compose run --rm backend sh -c "alembic upgrade head"
 ```
 
-> **Зверни увагу:** міграції `3a9f2c77d1b4` (transfer type) і
-> `f0a1b2c3d4e5` (notifications) досі **не застосовані** до жодної бази, бо
-> Docker був вимкнений. У продакшені вони застосуються автоматично при першому
-> старті образу; для локальної Postgres запусти `docker compose up -d`,
-> потім `docker compose run --rm backend sh -c "alembic upgrade head"`.
+> Міграції застосовуються автоматично при старті образу (`alembic upgrade head`).
 
 ### Celery (worker + beat)
 - `worker` — виконує асинхронні задачі (`app.tasks`).
