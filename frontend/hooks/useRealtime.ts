@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { api, getWsUrl, tokenStore } from "@/lib/api";
-import type { BookSnapshot, PriceMessage } from "@/lib/types";
+import type { BookSnapshot, MarketTrade, PriceMessage } from "@/lib/types";
 
 export type RealtimeMode = "ws" | "polling";
 
@@ -12,6 +12,7 @@ export interface RealtimeState {
   hello: string | null;
   prices: Record<string, number>;
   book: BookSnapshot | null;
+  trades: Record<string, MarketTrade[]>;
   lastUpdate: number;
 }
 
@@ -34,6 +35,7 @@ export function useRealtimePrices(pairs: string[]) {
     hello: null,
     prices: {},
     book: null,
+    trades: {},
     lastUpdate: 0,
   });
 
@@ -57,6 +59,7 @@ export function useRealtimePrices(pairs: string[]) {
     hello?: string;
     prices?: Record<string, number>;
     book?: BookSnapshot;
+    trades?: Record<string, MarketTrade[]>;
     dirty: boolean;
   }>({ dirty: false });
 
@@ -108,6 +111,16 @@ export function useRealtimePrices(pairs: string[]) {
           } catch {
             /* retry next tick */
           }
+          try {
+            const marketTrades = await api.getMarketTrades(pairs[0], 30);
+            pendingRef.current.trades = {
+              ...pendingRef.current.trades,
+              [pairs[0]]: marketTrades,
+            };
+            pendingRef.current.dirty = true;
+          } catch {
+            /* retry next tick */
+          }
         }
       };
 
@@ -124,6 +137,7 @@ export function useRealtimePrices(pairs: string[]) {
         hello: pending.hello ?? s.hello,
         prices: pending.prices ? { ...s.prices, ...pending.prices } : s.prices,
         book: pending.book ?? s.book,
+        trades: pending.trades ? { ...s.trades, ...pending.trades } : s.trades,
         lastUpdate: Date.now(),
       }));
       pendingRef.current = { dirty: false };
@@ -187,6 +201,16 @@ export function useRealtimePrices(pairs: string[]) {
             pendingRef.current.dirty = true;
           } else if (msg.type === "book") {
             pendingRef.current.book = msg as unknown as BookSnapshot;
+            pendingRef.current.dirty = true;
+          } else if (msg.type === "trades") {
+            const trades = msg as unknown as {
+              pair: string;
+              trades: MarketTrade[];
+            };
+            pendingRef.current.trades = {
+              ...pendingRef.current.trades,
+              [trades.pair]: trades.trades,
+            };
             pendingRef.current.dirty = true;
           }
         } catch {

@@ -9,7 +9,7 @@ from app.core import cache
 from app.core.database import async_session
 from app.core.security import decode_token, is_token_blacklisted
 from app.models.user import User
-from app.services.market import get_live_price_async
+from app.services.market import get_live_price_async, recent_trades
 from app.services.depth import order_book
 from app.services.notifications import list_notifications, unread_count
 
@@ -82,6 +82,8 @@ async def ws_prices(websocket: WebSocket):
                 for pair in subscribed[:1]:
                     book = await order_book(pair)
                     await websocket.send_json({"type": "book", **book})
+                    trades = await recent_trades(pair, limit=30)
+                    await websocket.send_json({"type": "trades", "pair": pair, "trades": trades})
     except WebSocketDisconnect:
         logger.info("WS disconnected for %s", user.id)
 

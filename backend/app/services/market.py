@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.trading_pair import TradingPair
 from app.core.cache import cache_get, cache_set
 from app.services import binance_client
+from app.services.market_maker import engine
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +86,43 @@ async def get_live_price_async(pair_symbol: str) -> Decimal:
         if price is not None:
             await cache_set(cache_key, price, BINANCE_PRICE_TTL)
             return Decimal(str(price))
-    return _current_price(pair_symbol)
+    # Simulated fallback: the market maker's evolving mid instead of the static
+    # per-minute anchor, so the realtime feed feels alive when Binance is down.
+    return engine.price(pair_symbol)
+
+
+async def recent_trades(pair_symbol: str, limit: int = 30) -> list[dict]:
+    """Recent executed market trades (tape).
+
+    Real Binance trade prints when the upstream feed is reachable, otherwise
+    the market maker's simulated tape — so the trade tape never looks dead.
+    Returns newest-first: [{time, price, qty, side}, ...].
+    """
+    binance_sym = binance_client.binance_symbol(pair_symbol)
+    if binance_sym:
+        n = min(limit, 100)
+        cache_key = f"market:binance:trades:{binance_sym}:{n}"
+        raw = await cache_get(cache_key)
+        if raw is None:
+            raw = await binance_client.fetch_recent_trades(binance_sym, limit=n)
+            if raw is not None:
+                await cache_set(cache_key, raw, BINANCE_PRICE_TTL)
+        if raw:
+            try:
+                trades = [
+                    {
+                        "time": datetime.fromtimestamp(t["time"] / 1000, UTC).isoformat(),
+                        "price": float(t["price"]),
+                        "qty": float(t["qty"]),
+                        "side": "sell" if t.get("isBuyerMaker") else "buy",
+                    }
+                    for t in raw
+                ]
+                trades.reverse()  # newest first, like the simulated tape
+                return trades[:limit]
+            except (KeyError, TypeError, ValueError) as e:
+                logger.warning("Binance trades parse failed for %s: %s", pair_symbol, e)
+    return engine.recent_trades(pair_symbol, limit)
 
 
 async def list_pairs(db: AsyncSession) -> list[TradingPair]:
@@ -107,7 +144,7 @@ async def _pair_symbols(db: AsyncSession) -> list[str]:
 
 def get_ticker(pair_symbol: str, base: Decimal, quote: Decimal) -> dict:
     """Deterministic simulated ticker — fallback when Binance is unreachable."""
-    price = _current_price(pair_symbol)
+    price = engine.price(pair_symbol)
     open_price = _price_at(pair_symbol, datetime.now(UTC) - timedelta(hours=24))
     change = (price - open_price) / open_price if open_price else Decimal("0")
     high = max(price, open_price) * (Decimal("1") + Decimal("0.01"))
@@ -131,7 +168,7 @@ def get_stats_24h(pair_symbol: str, base: str, quote: str) -> dict:
     """Deterministic simulated 24h stats — fallback when Binance is unreachable."""
     now = datetime.now(UTC)
     open_price = _price_at(pair_symbol, now - timedelta(hours=24))
-    close_price = _current_price(pair_symbol)
+    close_price = engine.price(pair_symbol)
     change = (close_price - open_price) / open_price if open_price else Decimal("0")
     high = max(close_price, open_price) * (Decimal("1") + Decimal("0.012"))
     low = min(close_price, open_price) * (Decimal("1") - Decimal("0.012"))

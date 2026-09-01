@@ -10,6 +10,7 @@ import type {
   BookSnapshot,
   Candle,
   MarketStats,
+  MarketTrade,
   Notification,
   Order,
   PortfolioHistoryPoint,
@@ -224,6 +225,10 @@ export const api = {
     apiFetch<MarketStats>(`/api/v1/market/stats/${encodeURIComponent(symbol)}`),
   getDepth: (symbol: string) =>
     apiFetch<BookSnapshot>(`/api/v1/market/depth/${encodeURIComponent(symbol)}`),
+  getMarketTrades: (symbol: string, limit = 30) =>
+    apiFetch<MarketTrade[]>(
+      `/api/v1/market/trades/${encodeURIComponent(symbol)}?limit=${limit}`,
+    ),
 
   // wallets
   getBalances: () => apiFetch<BalanceResponse>("/api/v1/wallets/balances", { auth: true }),

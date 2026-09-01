@@ -9,6 +9,7 @@ import { api, ApiError } from "@/lib/api";
 import { Protected } from "@/components/Protected";
 import { Alert, Badge, Button, Card, CardHeader, Input, Select, Spinner } from "@/components/ui";
 import { OrderBook } from "@/components/OrderBook";
+import { MarketTradesPanel } from "@/components/MarketTradesPanel";
 import { CandleChart } from "@/components/CandleChart";
 import { MarketStatsPanel } from "@/components/MarketStatsPanel";
 import { FlashValue } from "@/components/FlashValue";
@@ -256,23 +257,32 @@ function TradingView() {
           </div>
         </Card>
 
-        <Card>
-          <CardHeader title="Order book" subtitle="Live depth" />
-          <div className="p-4">
-            {realtime.book ? (
-              <OrderBook
-                levels={realtime.book.levels}
-                bestBid={realtime.book.best_bid}
-                bestAsk={realtime.book.best_ask}
-                spread={realtime.book.spread}
-              />
-            ) : (
-              <div className="flex h-64 items-center justify-center">
-                <span className="text-sm text-ink0">Connecting…</span>
-              </div>
-            )}
-          </div>
-        </Card>
+        <div className="flex flex-col gap-6">
+          <Card>
+            <CardHeader title="Order book" subtitle="Live depth" />
+            <div className="p-4">
+              {realtime.book ? (
+                <OrderBook
+                  levels={realtime.book.levels}
+                  bestBid={realtime.book.best_bid}
+                  bestAsk={realtime.book.best_ask}
+                  spread={realtime.book.spread}
+                />
+              ) : (
+                <div className="flex h-64 items-center justify-center">
+                  <span className="text-sm text-ink0">Connecting…</span>
+                </div>
+              )}
+            </div>
+          </Card>
+
+          <Card>
+            <CardHeader title="Market trades" subtitle="Live tape" />
+            <div className="p-4">
+              <MarketTradesPanel trades={realtime.trades[pair] ?? []} />
+            </div>
+          </Card>
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">

@@ -96,3 +96,17 @@ async def fetch_depth(symbol: str, limit: int = 10) -> dict[str, Any] | None:
         f"depth {symbol}",
     )
     return data if isinstance(data, dict) else None
+
+
+async def fetch_recent_trades(symbol: str, limit: int = 20) -> list[dict[str, Any]] | None:
+    """GET /api/v3/trades?limit=N -> recent market trades, newest first.
+
+    Each entry carries ``price``, ``qty`` and ``isBuyerMaker`` (true when the
+    aggressive order was a sell), which lets us reconstruct a buy/sell tape.
+    """
+    data = await _request(
+        "/api/v3/trades",
+        {"symbol": symbol, "limit": limit},
+        f"trades {symbol}",
+    )
+    return data if isinstance(data, list) else None

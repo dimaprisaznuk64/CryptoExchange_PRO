@@ -47,6 +47,9 @@ class Settings(BaseSettings):
     # Conditional orders (TP/SL) background monitor
     CONDITIONAL_CHECK_INTERVAL_SECONDS: int = 5
 
+    # Simulated market maker tick (drives the synthetic order book + tape)
+    MARKET_MAKER_TICK_SECONDS: float = 0.5
+
     # Demo signup bonus (USDT credited to a brand-new account)
     DEMO_SIGNUP_BONUS_USDT: float = 10000.0
     DEMO_SIGNUP_BONUS_ASSET: str = "USDT"

@@ -172,6 +172,19 @@ export interface BookMessage {
   levels: BookLevel[];
 }
 
+export interface MarketTrade {
+  time: string;
+  price: number;
+  qty: number;
+  side: "buy" | "sell";
+}
+
+export interface TradesMessage {
+  type: "trades";
+  pair: string;
+  trades: MarketTrade[];
+}
+
 export type ServerMessage =
   | { type: "hello"; user: string; pairs: string[] }
   | PriceMessage

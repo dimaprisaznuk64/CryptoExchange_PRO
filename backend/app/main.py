@@ -19,6 +19,8 @@ from app.core.database import async_session
 from app.core.ratelimit import AccountLocked, RateLimitExceeded
 from app.routers import health, auth, wallets, market, orders, portfolio, notifications, admin, ws
 from app.services import trading as trading_service
+from app.services import market as market_service
+from app.services import market_maker
 
 settings = get_settings()
 setup_logging()
@@ -41,6 +43,23 @@ async def _conditional_monitor_loop() -> None:
             logger.exception("Conditional order monitor error")
 
 
+async def _market_maker_loop() -> None:
+    """Advance the simulated order book + trade tape so the market feels alive
+    when real Binance data is unreachable."""
+    while True:
+        await asyncio.sleep(settings.MARKET_MAKER_TICK_SECONDS)
+        try:
+            if market_maker.engine is None:
+                continue
+            async with async_session() as session:
+                pairs = await market_service.list_pairs(session)
+            market_maker.engine.tick([p.symbol for p in pairs])
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("Market maker loop error")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_redis()
@@ -48,10 +67,13 @@ async def lifespan(app: FastAPI):
         from app.core.seed import seed_catalog
         await seed_catalog(session)
     monitor_task = asyncio.create_task(_conditional_monitor_loop())
+    market_maker_task = asyncio.create_task(_market_maker_loop())
     yield
     monitor_task.cancel()
+    market_maker_task.cancel()
     try:
         await monitor_task
+        await market_maker_task
     except asyncio.CancelledError:
         pass
     await close_redis()

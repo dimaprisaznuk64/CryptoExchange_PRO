@@ -81,6 +81,23 @@ async def get_stats_24h(symbol: str, db: AsyncSession = Depends(get_db)):
 
 
 @router.get(
+    "/trades/{symbol:path}",
+    dependencies=[Depends(rate_limit("market_trades", limit=60, window=60))],
+)
+async def get_recent_trades(
+    symbol: str,
+    limit: int = Query(30, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+):
+    """Recent executed market trades (buy/sell tape), newest first.
+
+    Falls back to the simulated market maker tape when Binance is unreachable.
+    """
+    await _get_pair(db, symbol)
+    return await market_service.recent_trades(symbol, limit)
+
+
+@router.get(
     "/depth/{symbol:path}",
     dependencies=[Depends(rate_limit("market_depth", limit=120, window=60))],
 )

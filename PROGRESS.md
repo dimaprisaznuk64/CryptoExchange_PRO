@@ -4,8 +4,17 @@
 
 ## Останнє оновлення
 
-- Дата: 2026-08-31
-- Стан: **Реальні ринкові дані Binance + стабільність /trade на проді + Phase 27 (security/financial integrity, частина 3: WS ticket) — в роботі.**
+- Дата: 2026-09-01
+- Стан: **Phase 28 (Market Maker — живий стакан + рух ціни + trade tape) завершено. Backend 117 passed, frontend lint+build green.**
+
+### Що зроблено зараз (Phase 28 — Market Maker, «оживлення» ринку):
+- **`services/market_maker.py`** — in-process `MarketMakerEngine`: на кожен тік (~0.5s, `MARKET_MAKER_TICK_SECONDS`) для кожної пари дрейфує mid-ціну (bounded random walk + ре-анчор до детермінованої ціни кожні 60с, щоб ціна лишалась згорткована зі свічками/24h stats), друкує угоди в барвисту «ленту» (taker б'є best level), споживає рівні стакана і відновлює повний ладдер навколо нової ціни; `tape` (rolling deque, maxlen 60) віддає останні угоди newest-first.
+- **Усе це — fallback, коли Binance недоступний** (Render free / офлайн): `depth.order_book()` тепер віддає `engine.snapshot()` замість старого детермінованого стакана, `get_live_price_async()`/`get_ticker()`/`get_stats_24h()` у fallback використовують `engine.price()`. Стакан тепер **ем видніший** — рівні не «стрибають» що 2с, а поступово змінюються від угод.
+- **Новий ендпоінт `GET /market/trades/{symbol}`** (rate_limit per-IP) — останні виконані угоди (tape): реальні Binance-принти (`binance_client.fetch_recent_trades`, `/api/v3/trades`, Redis-cache TTL 2s, `isBuyerMaker` → buy/sell) коли доступні, інакше симульована лента двигуна.
+- **WS `/ws/prices`** — нове повідомлення `{"type":"trades", pair, trades:[{time,price,qty,side}]}` кожні ~2s (разом зі snapshot стакана).
+- **Frontend**: панель **Market trades** на `/trade` під Order book (ціна кольором buy/sell, qty, час); `lib/types.ts` → `MarketTrade`/`TradesMessage`; `api.getMarketTrades()`; `useRealtime` обробляє `trades`-повідомлення з WS і в polling-fallback теж тягне `/market/trades` кожні 2с.
+- Тести: `tests/test_market_maker.py` +8 (price band, snapshot balanced, тики друкують угоди + ціна рухається, refill після consumption, tape capped, endpoint симуляція/404, Binance-parse buy/sell) → **117 passed**; frontend lint ✓ (1 pre-existing warning у register/page.tsx), `next build` ✓ (11 сторінок).
+- Коміт: див. git log (Phase 28).
 
 ### Що зроблено зараз (Phase 27 — Server Security & Financial Integrity, частина 3: WS ticket + тести):
 - **JWT більше не потрапляє в WS URL.** `POST /api/v1/auth/ws-ticket` (`auth.py`) видає короткоживучий одноразовий ticket (`core/cache.py:` `create_ws_ticket`/`consume_ws_ticket`, Redis key `crypto:ws-ticket:<ticket>`, TTL 60s, single-use delete). `authenticate_ws` (`ws.py`) приймає `?ticket=` через `consume_ws_ticket` з fallback на старий `?token=`. Frontend: `api.getWsTicket()` + async `getWsUrl(pairs)` → `?ticket=`, `useRealtime.ts` `connect()` async + `void connect()`. Це усуває витік JWT у query-параметрі WS (можливий перехоплення в логах проксі/WS gateway).
@@ -359,7 +368,7 @@
 
 - ✅ Демо-бонус $10,000 USDT при реєстрації → **102 passed**
 - ✅ Бекенд: реальні ринкові дані Binance (ціни/стакан/свічки) з fallback на симуляцію → **102 passed**
-- ➡️ Далі з плану «оживлення»: Market Maker (генерація ордерів у стакані та рух ціни), щоб прибрати відчуття порожнечі
+- ✅ Market Maker: живий стакан, рух ціни, trade tape (симуляція → fallback; Binance → реальні принти) → **117 passed**
 - ➡️ Далі з плану «стабільність»: Error Boundary на фронтенді (проти білої сторінки) та стабілізація WebSocket (wss:// + reconnect)
 - ➡️ Майбутнє (ideas): lightweight-charts (свічковий графік як на TradingView), 2FA, розширені типи ордерів
 
@@ -394,6 +403,8 @@
 | 24 | Деплой: Docker backend + Vercel frontend | ✅ (конфіги + docs) |
 | 25 | Адмін-кабінет part 1: керування користувачами | ✅ (додано) |
 | 26 | Адмін part 2: перегляд ордерів/трейдів всіх користувачів | ✅ (додано) |
+| 27 | Server Security & Financial Integrity (concurrency, logout revoke, WS ticket) | ✅ (додано) |
+| 28 | Market Maker (живий стакан + рух ціни + trade tape) | ✅ (додано) |
 
 ## Як запустити frontend
 
