@@ -28,6 +28,14 @@ const FLUSH_INTERVAL_MS = 250;
 const MAX_RECONNECTS = 3;
 const POLL_INTERVAL_MS = 2000;
 
+// Heartbeat: the backend sends {"type":"ping"} every ~15s and drops sockets
+// that don't answer. We also keep a client-side staleness watch — if a server
+// fails to deliver anything for STALE_AFTER_MS (half-open TCP on free-tier
+// hosts), we close the socket ourselves so reconnect logic kicks in.
+const PONG_RESPONSE = JSON.stringify({ type: "pong" });
+const STALE_AFTER_MS = 20000;
+const STALE_CHECK_MS = 10000;
+
 export function useRealtimePrices(pairs: string[]) {
   const [state, setState] = useState<RealtimeState>({
     connected: false,
@@ -62,6 +70,10 @@ export function useRealtimePrices(pairs: string[]) {
     trades?: Record<string, MarketTrade[]>;
     dirty: boolean;
   }>({ dirty: false });
+
+  // Timestamp of the last frame received over the socket; used by the
+  // staleness watcher to detect silently-dead connections.
+  const lastMessageRef = useRef(0);
 
   useEffect(() => {
     if (pairs.length === 0) return;
@@ -143,6 +155,21 @@ export function useRealtimePrices(pairs: string[]) {
       pendingRef.current = { dirty: false };
     }, FLUSH_INTERVAL_MS);
 
+    // Client-side staleness watch: if an open socket delivers nothing for a
+    // while, force it closed so the reconnect/backoff path takes over instead
+    // of leaving the UI frozen on a half-open connection.
+    const staleTimer = setInterval(() => {
+      if (
+        ws &&
+        !closed &&
+        ws.readyState === WebSocket.OPEN &&
+        Date.now() - lastMessageRef.current > STALE_AFTER_MS
+      ) {
+        lastMessageRef.current = Date.now();
+        ws.close();
+      }
+    }, STALE_CHECK_MS);
+
     const connect = async () => {
       if (closed) return;
       connectAttemptsRef.current += 1;
@@ -189,7 +216,11 @@ export function useRealtimePrices(pairs: string[]) {
             type: string;
             [key: string]: unknown;
           };
-          if (msg.type === "hello") {
+          lastMessageRef.current = Date.now();
+          if (msg.type === "ping") {
+            // Answer the backend heartbeat so it doesn't drop us as dead.
+            ws?.send(PONG_RESPONSE);
+          } else if (msg.type === "hello") {
             pendingRef.current.hello = String(msg.user ?? "");
             pendingRef.current.dirty = true;
           } else if (msg.type === "price") {
@@ -251,6 +282,7 @@ export function useRealtimePrices(pairs: string[]) {
       closed = true;
       if (reconnectTimer) clearTimeout(reconnectTimer);
       clearInterval(flushTimer);
+      clearInterval(staleTimer);
       stopPolling();
       ws?.close();
     };

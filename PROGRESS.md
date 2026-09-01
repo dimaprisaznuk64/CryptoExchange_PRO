@@ -5,7 +5,14 @@
 ## Останнє оновлення
 
 - Дата: 2026-09-01
-- Стан: **Phase 29 (Error Boundary — захист від «білої сторінки») завершено. Backend 117 passed, frontend lint+build green.**
+- Стан: **Phase 30 (WS hardening: heartbeat + resume + subscribe) завершено. Backend 119 passed, frontend lint+build green.**
+
+### Що зроблено зараз (Phase 30 — WS hardening: heartbeat, resume, subscribe, wss://):
+- **Heartbeat ping/pong** у `/ws/prices`: сервер що ~15 тіків шле `{"type":"ping","ts":...}`, клієнт відповідає `{"type":"pong"}`. Якщо за **45с** не було жодної відповіді — сервер сам закриває сокет (Render free / проксі тихо вбивають idle-з'єднання, і лише клієнтський pong доводить, що канал живий). Клієнтський `onmessage` у `useRealtime.ts` відповідає на ping; додано **staleness-watcher**: якщо відкритий сокет нічого не шле 20с — клієнт сам закриває його, і спрацьовує reconnect/backoff замість «застиглого» UI на half-open з'єднанні.
+- **Resume**: після `hello` сервер одразу шле повний **снапшот** поточного стану (price для всіх пар + book + trades для першої) — реконект клієнта миттєво відрисовує ринок замість очікування наступних тіків.
+- **Динамічний subscribe/unsubscribe**: вхідні повідомлення тепер draining через `asyncio.wait_for(receive_json, 0.2s)` (TimeOut — нормальний шлях, не помилка), `{"type":"subscribe"|"unsubscribe","pairs":[...]}` змінюють набір пар наживо, нові пари одразу отримують снапшот. Биті кадри (ValueError/TypeError) не вбивають цикл — лог і продовження.
+- **wss:// fix** у `lib/api.ts`: WS_URL тепер виводиться і для https→`wss://`, і для http→`ws://` (браузери відхиляють не-ws схеми), окрім явного `NEXT_PUBLIC_WS_URL`.
+- Тести: +2 у `test_realtime.py` — `test_ws_subscribe_unsubscribe` (live-підписка/відписка з аками + снапшот ETH/USDT) і `test_ws_sends_heartbeat_ping` (ping приходить до «hello», ts є, pong тримає живим) → **119 passed**; frontend lint ✓ (1 pre-existing warning), `next build` ✓ (13 сторінок).
 
 ### Що зроблено зараз (Phase 29 — Error Boundary, «стабільність»):
 - **`app/error.tsx`** (root boundary) — будь-який краш роуту/сторінки рендериться як дружній картковий екран замість «білої сторінки»: бейдж ERROR, пояснення, копка **Try again** (`retry()`, стаб. проп у Next 16.3), посилання Back to home, `digest` для зіставлення з серверними логами. Живе всередині root layout, тож Navbar і сесія лишаються.
@@ -414,6 +421,7 @@
 | 27 | Server Security & Financial Integrity (concurrency, logout revoke, WS ticket) | ✅ (додано) |
 | 28 | Market Maker (живий стакан + рух ціни + trade tape) | ✅ (додано) |
 | 29 | Error Boundary (root + /trade + global) проти білої сторінки | ✅ (додано) |
+| 30 | WS hardening (heartbeat ping/pong, resume-снапшот, subscribe/unsubscribe, wss://) | ✅ (додано) |
 
 ## Як запустити frontend
 

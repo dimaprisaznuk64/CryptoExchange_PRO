@@ -29,10 +29,11 @@ import { site } from "@/lib/site";
 
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") || site.apiUrl;
-/** Base for websocket connections (wss). */
+/** Base for websocket connections. https → wss, http → ws (browsers reject
+ *  non-ws schemes for WebSocket URLs). */
 const WS_URL =
   process.env.NEXT_PUBLIC_WS_URL?.replace(/\/+$/, "") ||
-  API_URL.replace(/^https:\/\//, "wss://");
+  API_URL.replace(/^https:\/\//, "wss://").replace(/^http:\/\//, "ws://");
 
 export interface OrderFilter {
   status?: string;
